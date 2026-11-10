@@ -106,7 +106,7 @@ drive = json.load(open(_drive_f)) if _drive_f.exists() else {}
 drive = {re.sub(r"-[123]YO", "", k): v for k, v in drive.items()}
 GEO = PROJ / "2_data/literature/plankton/geo"
 recs = {}
-for pat in ("agent_out/geo_part*.out.jsonl", "agent_out_refine/refine_*.out.jsonl"):  # refine overrides first pass
+for pat in ("agent_out/geo_part*.out.jsonl", "agent_out_refine/refine_*.out.jsonl", "agent_out_supp/*.out.jsonl"):  # later passes override
     for f in sorted(GEO.glob(pat)):
         for ln in open(f):
             ln = ln.strip()
@@ -133,6 +133,9 @@ def geom_of(s):
     if None not in (la0, la1, lo0, lo1) and (la0 != la1 or lo0 != lo1):
         if s.get("geom") == "transect":
             return LineString([(lo0, la0), (lo1, la1)])
+        if 300 < lo1 - lo0 < 359:  # min/max taken across the dateline (e.g. 178E..164W stored as -164..178)
+            lo0, lo1 = lo1, lo0
+            s["lon_min"], s["lon_max"] = lo0, lo1
         if lo0 > lo1:
             # either a dateline-crossing box or swapped bounds: take the reading with the smaller span
             if (180 - lo0) + (lo1 + 180) < lo0 - lo1:

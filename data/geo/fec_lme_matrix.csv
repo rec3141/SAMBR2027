@@ -1,17 +1,17 @@
 papers,fec,1. Faroe Islands,2. Iceland Shelf,3. Greenland Sea - East Greenland,4. Norwegian Sea,5. Barents Sea,6. Kara Sea,7. Laptev Sea,8. East Siberian Sea,9. East Bering Sea,10. Aleutian Islands,11. West Bering Sea,12. Northern Bering-Chukchi Sea,13. Central Arctic Ocean,14. Beaufort Sea,15. Canadian High Arctic-North Greenland,16. Baffin Bay,17. Hudson Bay,18. Labrador-Newfoundland,Pan-Arctic / multi-LME
 all,Bacteria and Archaea,0,1,21,5,40,2,4,2,1,0,0,12,7,13,1,7,3,1,6
 all,Viruses,0,0,3,1,8,2,1,1,0,0,0,0,2,3,2,0,0,0,2
-all,Microbial eukaryotes,0,0,10,2,23,3,2,0,1,0,0,8,8,7,3,9,2,0,5
-all,Phytoplankton and larger protists,0,3,28,13,79,7,10,5,11,0,2,48,20,20,5,42,7,3,52
-all,Zooplankton,1,6,30,17,110,5,9,5,4,0,1,32,16,21,5,24,4,3,18
+all,Microbial eukaryotes,0,0,10,2,23,3,2,1,1,0,0,8,9,6,3,9,2,0,5
+all,Phytoplankton and larger protists,0,3,28,14,79,7,10,5,13,0,2,49,21,21,6,43,7,4,50
+all,Zooplankton,1,6,30,17,111,5,10,5,4,0,0,32,18,22,4,25,5,3,18
 all,"Cross-cutting (drivers, biogeochemistry, syntheses)",0,0,5,0,7,0,0,1,1,0,0,5,3,4,1,3,2,0,7
 field,Bacteria and Archaea,0,1,21,5,35,2,4,2,1,0,0,11,7,12,1,7,3,1,2
 field,Viruses,0,0,3,1,4,2,1,1,0,0,0,0,2,0,2,0,0,0,0
-field,Microbial eukaryotes,0,0,8,2,22,3,2,0,1,0,0,8,8,7,3,9,2,0,3
-field,Phytoplankton and larger protists,0,2,21,6,62,6,9,5,5,0,0,35,14,17,4,32,6,2,4
-field,Zooplankton,1,4,28,14,100,5,8,5,3,0,1,28,14,18,3,15,3,1,4
+field,Microbial eukaryotes,0,0,8,2,22,3,2,1,1,0,0,8,9,6,3,9,2,0,3
+field,Phytoplankton and larger protists,0,2,21,7,62,6,9,5,7,0,0,36,15,18,5,32,6,2,3
+field,Zooplankton,1,4,28,14,100,5,8,5,3,0,0,28,15,19,3,16,4,1,5
 field,"Cross-cutting (drivers, biogeochemistry, syntheses)",0,0,5,0,6,0,0,1,0,0,0,4,3,3,1,3,2,0,0
-field_3plus,Bacteria and Archaea,0,1,5,1,4,0,0,0,0,0,0,1,1,4,0,2,0,1,0
+field_3plus,Bacteria and Archaea,0,1,5,1,4,0,0,0,0,0,0,1,1,3,0,2,0,1,0
 field_3plus,Viruses,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 field_3plus,Microbial eukaryotes,0,0,5,0,5,0,0,0,0,0,0,0,1,0,1,2,0,0,0
 field_3plus,Phytoplankton and larger protists,0,2,4,1,15,1,1,2,3,0,0,13,3,5,0,5,0,1,1
@@ -20,12 +20,12 @@ field_3plus,"Cross-cutting (drivers, biogeochemistry, syntheses)",0,0,4,0,4,0,0,
 field_2yr,Bacteria and Archaea,0,0,2,0,5,0,0,0,1,0,0,2,1,1,1,2,0,0,0
 field_2yr,Viruses,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 field_2yr,Microbial eukaryotes,0,0,1,1,5,0,1,0,1,0,0,2,2,0,0,0,1,0,1
-field_2yr,Phytoplankton and larger protists,0,0,4,1,8,0,0,1,0,0,0,5,1,5,1,7,2,1,1
-field_2yr,Zooplankton,0,0,4,1,13,0,0,0,1,0,1,3,0,2,0,3,1,0,0
+field_2yr,Phytoplankton and larger protists,0,0,4,1,8,0,0,1,0,0,0,5,2,5,1,7,2,1,1
+field_2yr,Zooplankton,0,0,4,1,13,0,0,0,1,0,0,3,0,2,0,3,1,0,1
 field_2yr,"Cross-cutting (drivers, biogeochemistry, syntheses)",0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0
-field_1yr,Bacteria and Archaea,0,0,12,4,24,2,4,2,0,0,0,8,5,7,0,2,3,0,2
+field_1yr,Bacteria and Archaea,0,0,12,4,24,2,4,2,0,0,0,8,5,8,0,2,3,0,2
 field_1yr,Viruses,0,0,2,1,4,1,0,0,0,0,0,0,2,0,2,0,0,0,0
-field_1yr,Microbial eukaryotes,0,0,2,1,12,3,1,0,0,0,0,4,4,4,2,5,1,0,2
-field_1yr,Phytoplankton and larger protists,0,0,8,3,31,5,8,2,2,0,0,15,9,6,3,13,4,0,2
+field_1yr,Microbial eukaryotes,0,0,2,1,12,3,1,0,0,0,0,4,5,3,2,5,1,0,2
+field_1yr,Phytoplankton and larger protists,0,0,8,4,31,5,8,2,4,0,0,16,9,7,4,13,4,0,1
 field_1yr,Zooplankton,0,0,8,3,44,4,5,3,0,0,0,10,10,4,2,6,1,0,2
 field_1yr,"Cross-cutting (drivers, biogeochemistry, syntheses)",0,0,1,0,2,0,0,0,0,0,0,0,0,0,0,1,1,0,0
