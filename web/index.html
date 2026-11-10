@@ -267,11 +267,12 @@ Promise.all([
   }
 
   function renderList(){
-    let sel=papers.filter(okPaper);
-    if(state.lme) sel=sel.filter(p=>p._lmes.includes(state.lme));
+    // a text search looks across all papers, ignoring the FEC / span / LME filters
+    let sel=state.q?papers:papers.filter(okPaper);
+    if(state.lme&&!state.q) sel=sel.filter(p=>p._lmes.includes(state.lme));
     if(state.q){const terms=state.q.split(/\s+/).filter(Boolean);
       sel=sel.filter(p=>{const hay=(p.citekey+" "+p.title+" "+p.region_text+" "+p.authors+" "+p.journal+" "+p.year).toLowerCase();return terms.every(t=>hay.includes(t))});}
-    d3.select("#listTitle").text(`Papers (${sel.length})${state.lme?" — "+state.lme:""}`);
+    d3.select("#listTitle").text(`Papers (${sel.length})${state.q?" — search across all papers":state.lme?" — "+state.lme:""}`);
     const t=d3.select("#papers").html("");
     t.append("thead").append("tr").selectAll("th").data(["Citekey","Authors","FEC","Title","Region","LMEs","Coords","Obs","Links"]).join("th").text(d=>d);
     const doiUrl=d=>d?("https://doi.org/"+encodeURI(d.replace(/^https?:\/\/(dx\.)?doi\.org\//,""))):"";
