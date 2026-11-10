@@ -86,6 +86,7 @@ circle.site.off{opacity:.06;pointer-events:none}
 .legend svg{vertical-align:middle;margin-right:4px}
 .stats{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px}
 .stat .v{font-size:22px;font-weight:600}
+.stat .den{font-size:16px;font-weight:500;color:var(--text-muted)}
 .stat .k{font-size:12px;color:var(--text-muted)}
 table{border-collapse:collapse;width:100%;font-size:12px}
 th,td{padding:4px 6px;text-align:left;border-bottom:1px solid var(--grid)}
@@ -296,8 +297,14 @@ Promise.all([
         render()});
     const sel=papers.filter(okPaper);
     const nPts=pts.length, nEx=sel.filter(p=>p.best_precision==="exact").length;
-    d3.select("#stats").html([[sel.length,"papers"],[nPts,"sites shown"],[nEx,"papers with exact coordinates"],[sel.filter(p=>p.coords_in_supplement==="True"||p.coords_in_supplement===true).length,"station lists in supplements"]]
-      .map(([v,k])=>`<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join(""));
+    // stats follow FEC + span + LME selection (not the text search)
+    const inL=state.lme?sel.filter(p=>inCol(p,state.lme)):sel;
+    const keys=new Set(inL.map(p=>p.citekey));
+    const lmeCanon=state.lme&&state.lme!==PA?CANON[LABELS.indexOf(state.lme)]:null;
+    const nSites=pts.filter(f=>keys.has(f.properties.citekey)&&(!lmeCanon||(f.properties.lme_polygon||"").split("; ").includes(lmeCanon))).length;
+    const nExL=inL.filter(p=>p.best_precision==="exact").length;
+    d3.select("#stats").html(`<div class="stat"><div class="v">${nExL}<span class="den">/${inL.length}</span></div><div class="k">papers with exact coordinates${state.lme?" · "+esc(state.lme.replace(/^\d+\. /,"")):""}</div></div>`
+      +`<div class="stat"><div class="v">${nSites}</div><div class="k">sites${state.lme&&state.lme!==PA?" in this LME":""}</div></div>`);
     renderHeat(); renderList();
   }
 
