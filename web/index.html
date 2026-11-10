@@ -86,6 +86,8 @@ th{color:var(--text-muted);font-weight:500}
 #tip .m{color:var(--text-muted)}
 #papers td:nth-child(2){white-space:nowrap;font-weight:500}
 #papers td.g{width:28px;padding:2px}
+.tablewrap{max-height:70vh;overflow:auto;border-top:1px solid var(--grid)}
+#papers thead th{position:sticky;top:0;z-index:1;background:var(--surface-1);box-shadow:0 1px 0 var(--grid)}
 #papers th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
 #papers th.sortable:hover,#papers th[aria-sort]{color:var(--text-primary)}
 #papers th .arr{font-size:9px;margin-left:3px;opacity:.6}
@@ -133,7 +135,7 @@ a{color:var(--series)}
       <h2 id="listTitle" style="margin:0">Papers</h2>
       <input type="search" id="q" placeholder="Search authors, title, region, journal, year" aria-label="Filter papers">
     </div>
-    <div class="scroll"><table id="papers"></table></div>
+    <div class="tablewrap"><table id="papers"></table></div>
   </section>
 </main>
 <footer>Coordinates extracted from full texts by LLM agents and flagged by precision; check the paper before reuse. PDF links open the Plankton EN Google Drive (members only). Data &amp; code: <a href="https://github.com/rec3141/SAMBR2027">github.com/rec3141/SAMBR2027</a>. Downloads: <a href="data/sites.geojson">sites.geojson</a> · <a href="data/plankton_sites.csv">plankton_sites.csv</a> · <a href="data/plankton_papers_geo.csv">plankton_papers_geo.csv</a></footer>
@@ -298,7 +300,7 @@ Promise.all([
         const numeric=["year","precision","obs"].includes(d[1]);
         state.sort=state.sort.key===d[1]?{key:d[1],dir:-state.sort.dir}:{key:d[1],dir:numeric?-1:1};renderList()});
     const doiUrl=d=>d?("https://doi.org/"+encodeURI(d.replace(/^https?:\/\/(dx\.)?doi\.org\//,""))):"";
-    t.append("tbody").selectAll("tr").data(sel.slice(0,400)).join("tr").attr("class",p=>p.citekey===state.sel?"selrow":null).html(p=>{
+    t.append("tbody").selectAll("tr").data(sel).join("tr").attr("class",p=>p.citekey===state.sel?"selrow":null).html(p=>{
       const links=[p.doi?`<a href="${esc(doiUrl(p.doi))}" target="_blank" rel="noopener">DOI</a>`:"",
         p.drive_pdf?`<a href="${esc(p.drive_pdf)}" target="_blank" rel="noopener" title="Google Drive (Plankton EN members)">PDF</a>`:"",
         p.drive_pdf_en?`<a href="${esc(p.drive_pdf_en)}" target="_blank" rel="noopener" title="English translation">EN</a>`:""].filter(Boolean).join(" · ");
