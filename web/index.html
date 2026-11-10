@@ -84,7 +84,13 @@ circle.site.off{opacity:.06;pointer-events:none}
 .site.regional{fill:var(--ocean);fill-opacity:0;stroke:var(--series);stroke-width:1;pointer-events:all}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--text-secondary);margin-top:8px}
 .legend svg{vertical-align:middle;margin-right:4px}
-.stats{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px}
+.stats{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.stats .ctx{margin-left:auto;display:flex;align-items:center;gap:10px;text-align:right}
+.stats .ctx .cv{font-size:16px;font-weight:600;line-height:1.25}
+.stats .badge{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 6px;border-radius:8px;background:var(--lme-fill);color:var(--lme-hover);border:1px solid var(--lme-line);font-weight:600;font-size:13px}
+.stats .clr{border:1px solid var(--border);background:var(--surface-1);color:var(--text-secondary);width:26px;height:26px;border-radius:999px;cursor:pointer;font-size:15px;line-height:1}
+.stats .clr:hover{background:var(--grid);color:var(--text-primary)}
+@media (max-width:640px){.stats .ctx{margin-left:0;text-align:left;width:100%}}
 .stat .v{font-size:22px;font-weight:600}
 .stat .den{font-size:16px;font-weight:500;color:var(--text-muted)}
 .stat .k{font-size:12px;color:var(--text-muted)}
@@ -303,8 +309,14 @@ Promise.all([
     const lmeCanon=state.lme&&state.lme!==PA?CANON[LABELS.indexOf(state.lme)]:null;
     const nSites=pts.filter(f=>keys.has(f.properties.citekey)&&(!lmeCanon||(f.properties.lme_polygon||"").split("; ").includes(lmeCanon))).length;
     const nExL=inL.filter(p=>p.best_precision==="exact").length;
-    d3.select("#stats").html(`<div class="stat"><div class="v">${nExL}<span class="den">/${inL.length}</span></div><div class="k">papers with exact coordinates${state.lme?" · "+esc(state.lme.replace(/^\d+\. /,"")):""}</div></div>`
-      +`<div class="stat"><div class="v">${nSites}</div><div class="k">sites${state.lme&&state.lme!==PA?" in this LME":""}</div></div>`);
+    const where=state.lme?(state.lme===PA?"Pan-Arctic / multi-LME":state.lme.replace(/^\d+\. /,"")):"All LMEs";
+    const lmeNo=state.lme&&state.lme!==PA?state.lme.split(".")[0]:(state.lme===PA?"PA":"");
+    const sub=[state.fec==="all"?"All FECs":FEC_SHORT[state.fec], state.dur==="all"?"any span":(DURS.find(d=>d[0]===state.dur)||[,""])[1]+" observation"].join(" · ");
+    d3.select("#stats").html(`<div class="stat"><div class="v">${nExL}<span class="den">/${inL.length}</span></div><div class="k">papers with exact coordinates</div></div>`
+      +`<div class="stat"><div class="v">${nSites.toLocaleString()}</div><div class="k">sites</div></div>`
+      +`<div class="ctx">${lmeNo?`<span class="badge">${esc(lmeNo)}</span>`:""}<div><div class="cv">${esc(where)}</div><div class="k">${esc(sub)}</div></div>`
+      +(state.lme?`<button class="clr" id="clearLme" title="Show all LMEs" aria-label="Clear LME selection">×</button>`:"")+`</div>`);
+    const cl=document.getElementById("clearLme"); if(cl) cl.onclick=()=>{state.lme=null;render();svg.transition().duration(600).call(zoom.transform,d3.zoomIdentity)};
     renderHeat(); renderList();
   }
 
