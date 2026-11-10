@@ -56,6 +56,8 @@ label.chk{font-size:13px;color:var(--text-secondary);display:inline-flex;gap:6px
 .rotbar{position:absolute;top:8px;left:8px;display:flex;gap:2px;flex-wrap:wrap;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:2px}
 .rotbar button{border:0;background:none;color:var(--text-secondary);font:inherit;font-size:12px;padding:3px 7px;border-radius:6px;cursor:pointer}
 .rotbar button:hover{background:var(--grid);color:var(--text-primary)}
+.btn{font:inherit;font-size:13px;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-primary);cursor:pointer}
+.btn:hover{background:var(--grid)}
 .resetbtn{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-primary);cursor:pointer}
 .land{fill:var(--land);stroke:var(--land-line);stroke-width:.4}
 .graticule{fill:none;stroke:var(--lme-line);stroke-opacity:.35;stroke-width:.5}
@@ -133,7 +135,7 @@ a{color:var(--series)}
   <section class="card" style="margin-top:16px" aria-label="Paper list">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
       <h2 id="listTitle" style="margin:0">Papers</h2>
-      <input type="search" id="q" placeholder="Search authors, title, region, journal, year" aria-label="Filter papers">
+      <span style="display:flex;gap:8px;flex-wrap:wrap"><input type="search" id="q" placeholder="Search authors, title, region, journal, year" aria-label="Filter papers"><button id="exportCsv" class="btn" title="Download the papers currently listed as CSV">Export CSV</button></span>
     </div>
     <div class="tablewrap"><table id="papers"></table></div>
   </section>
@@ -289,6 +291,7 @@ Promise.all([
       precision:p=>PREC[p.best_precision]||0,obs:p=>OBS[p.obs_duration]||0};
     const sk=KEYS[state.sort.key], dir=state.sort.dir;
     if(sk) sel=sel.slice().sort((a,b)=>{const x=sk(a),y=sk(b);return (x<y?-1:x>y?1:0)*dir||a.citekey.localeCompare(b.citekey)});
+    lastSel=sel;
     const t=d3.select("#papers").html("");
     const COLS=[["",null],["Citekey","citekey"],["Authors","authors"],["Year","year"],["FEC","fec"],["Title","title"],["Region","region"],["LMEs","lmes"],["Precision","precision"],["Obs","obs"],["Links",null]];
     t.append("thead").append("tr").selectAll("th").data(COLS).join("th")
@@ -311,6 +314,21 @@ Promise.all([
       const globe=p.n_sites>0?`<button class="globe" data-k="${esc(p.citekey)}" title="Show on map" aria-label="Show ${esc(p.citekey)} on map">${GLOBE}</button>`:"";
       return `<td class="g">${globe}</td><td>${esc(p.citekey)}</td><td class="au" title="${esc(au.join("; "))}">${auCell}</td><td>${esc(p.year)}</td><td>${esc(FEC_SHORT[p.fec]||"")}</td><td>${esc(p.title)}${p.journal?` <span class="m">${esc(p.journal)}</span>`:""}</td><td>${esc(p.region_text)}</td><td>${esc(p._lmes.map(l=>l.split(". ")[0]).join(", "))}</td><td>${esc(p.best_precision)}${(p.coords_in_supplement===true||p.coords_in_supplement==="True")?" · suppl.":""}</td><td>${esc(p.obs_duration)}</td><td style="white-space:nowrap">${links}</td>`});
   }
+  // export the currently listed papers (same filter + sort as the table)
+  let lastSel=[];
+  d3.select("#exportCsv").on("click",()=>{
+    const doiUrl=d=>d?("https://doi.org/"+d.replace(/^https?:\/\/(dx\.)?doi\.org\//,"")):"";
+    const cols=[["citekey",p=>p.citekey],["authors",p=>p.authors],["year",p=>p.year],["title",p=>p.title],["journal",p=>p.journal],
+      ["fec",p=>FEC_SHORT[p.fec]||p.fec],["region",p=>p.region_text],["lmes",p=>p._lmes.join("; ")],["precision",p=>p.best_precision],
+      ["obs_span",p=>p.obs_duration],["obs_years",p=>p.obs_years],["n_sites",p=>p.n_sites],
+      ["coords_in_supplement",p=>(p.coords_in_supplement===true||p.coords_in_supplement==="True")?"yes":""],
+      ["doi_url",p=>doiUrl(p.doi)],["pdf_url",p=>p.drive_pdf],["pdf_en_url",p=>p.drive_pdf_en]];
+    const q=v=>{v=v==null?"":String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+    const csv=[cols.map(c=>c[0]).join(",")].concat(lastSel.map(p=>cols.map(c=>q(c[1](p))).join(","))).join("\r\n");
+    const tag=[state.fec!=="all"?FEC_SHORT[state.fec]:"",state.dur!=="all"?state.dur:"",state.lme&&!state.q?state.lme.split(". ")[0]:"",state.q?"search":""].filter(Boolean).join("_").replace(/[^A-Za-z0-9_+-]+/g,"-");
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}));
+    a.download=`SAMBR2027_plankton_papers${tag?"_"+tag:""}.csv`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  });
   // reverse lookup: globe button in a table row selects the paper and zooms the map to its sites
   function showOnMap(k){
     state.sel=k; render();
