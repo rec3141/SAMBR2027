@@ -1,0 +1,10 @@
+# Data and page change on every deploy: make browsers revalidate (ETag/Last-Modified) instead of caching 2 days
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|json|geojson|csv|xlsx)$">
+    Header set Cache-Control "no-cache"
+    Header unset Expires
+  </FilesMatch>
+</IfModule>
+<IfModule mod_expires.c>
+  ExpiresActive Off
+</IfModule>
