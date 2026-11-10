@@ -153,12 +153,34 @@ def lmes_for(g):
     return [lme_p.loc[d.idxmin(), "lme"]] if d.min() < 50_000 else []
 
 
+REGIONAL_NAME = re.compile(r"\b(sea|ocean|basin|gulf|strait|shelf|arctic|archipelago|region|domain|pan-arctic|compilation|transect|section|cruise|survey|area|stations)\b", re.I)
+LOCAL_NAME = re.compile(r"\b(fjord|fjorden|bay|inlet|harbou?r|lagoon|sound|station|stn|mooring|camp|site|isfjorden|kongsfjorden|island)\b", re.I)
+PREC_RANK = {"exact": 3, "local": 2, "regional": 1}
+
+
+def precision(s, g):
+    """Ordinal spatial precision: exact (printed coordinates) > local (~tens of km) > regional (basin scale)."""
+    fl = s.get("flag", "")
+    if fl == "exact":
+        return "exact"
+    if g is not None and g.geom_type != "Point":
+        b = g.bounds  # lon0, lat0, lon1, lat1
+        big = (b[3] - b[1]) > 2 or ((b[2] - b[0]) > 5 and (b[2] - b[0]) < 355)
+        return "regional" if big else "local"
+    name = str(s.get("name", ""))
+    if re.search(r"\b[A-Z]{1,5}[- ]?\d{1,4}[a-z]?\b|\(fixed\)|\bhaven\b|\bpoint\b", name):  # station codes / fixed sites
+        return "local"
+    if fl == "estimated" and REGIONAL_NAME.search(name) and not LOCAL_NAME.search(name):
+        return "regional"
+    return "local"
+
+
 site_rows, paper_rows = [], []
 for r in recs:
     k = r["citekey"]
     d = dur.get(k, {})
     fec = r.get("fec") or d.get("fec", "")
-    plmes, best = set(), "none"
+    plmes, best, bestp = set(), "none", "none"
     rank = {"exact": 3, "approx": 2, "estimated": 1}
     for i, s in enumerate(r.get("sites") or []):
         g = geom_of(s)
@@ -167,12 +189,15 @@ for r in recs:
         fl = s.get("flag", "")
         if rank.get(fl, 0) > rank.get(best, 0):
             best = fl
+        pr = precision(s, g)
+        if PREC_RANK.get(pr, 0) > PREC_RANK.get(bestp, 0):
+            bestp = pr
         site_rows.append({
             "citekey": k, "fec": fec, "fec_name": FECS.get(fec, ""), "site_no": i + 1, "site": s.get("name", ""),
             "lat": num(s.get("lat")), "lon": num(s.get("lon")), "geom": s.get("geom", "point"),
             "lat_min": num(s.get("lat_min")), "lat_max": num(s.get("lat_max")),
             "lon_min": num(s.get("lon_min")), "lon_max": num(s.get("lon_max")),
-            "n_stations": s.get("n_stations"), "coord_flag": fl, "coord_source": s.get("source", ""),
+            "n_stations": s.get("n_stations"), "precision": pr, "coord_flag": fl, "coord_source": s.get("source", ""),
             "lme_polygon": "; ".join(ls), "study_type": r.get("study_type", ""),
             "obs_duration": d.get("duration_class", ""), "obs_years": d.get("years", ""),
             "title": d.get("title", ""), "_geom": g})
@@ -180,7 +205,7 @@ for r in recs:
     paper_rows.append({
         "citekey": k, "fec": fec, "fec_name": FECS.get(fec, ""), "title": d.get("title", ""),
         "study_type": r.get("study_type", ""), "region_text": r.get("region_text", ""),
-        "n_sites": len(r.get("sites") or []), "best_coord_flag": best,
+        "n_sites": len(r.get("sites") or []), "best_precision": bestp, "best_coord_flag": best,
         "coords_in_supplement": bool(r.get("coords_in_supplement")), "supplement_note": r.get("supplement_note", ""),
         "lme_polygon": "; ".join(sorted(plmes, key=lambda x: LMES.index(x) if x in LMES else 99)),
         "lme_agent_guess": "; ".join(guess),
@@ -224,7 +249,8 @@ long.to_csv(out / "fec_lme_matrix.csv")
 with pd.ExcelWriter(out / "plankton_geo_by_FEC.xlsx") as xw:
     readme = pd.DataFrame({"README": [
         "Sampling locations extracted from the full text of score-4/5 plankton papers (Sonnet agents, from text, tables, map figures).",
-        "coord_flag: exact = printed in the paper; approx = read off a map or given as a range/box; estimated = inferred from a place name.",
+        "precision (ordinal): exact = coordinates printed in the paper/supplement/dataset; local = within ~tens of km (map-read, or a named fjord/bay/station/mooring); regional = basin-scale box/transect or a sea/basin name.",
+        "coord_flag (provenance): exact = printed; approx = read off a map or given as a range/box; estimated = inferred from a place name or prior knowledge.",
         "lme_polygon: interim 2013 PAME Arctic LME polygons (to be replaced by CAFF shapefiles). Papers: lme_disagree = polygon vs agent guess differ.",
         "FEC_x_LME_*: number of papers per FEC with at least one site in each LME. all = every study type (pan-Arctic models/remote sensing count in every LME they cover); field = field surveys, time series and moorings only, also split by observation span.",
         "coords_in_supplement: station list only in a supplement/data repository — main-text estimate given; follow up there for exact positions."]})
@@ -257,6 +283,6 @@ json.dump({"fecs": FECS, "lmes": [ODS_LABEL[l] for l in LMES],
            "matrices": {k: v.to_dict(orient="split") for k, v in mats.items()},
            "papers": papers.drop(columns="lmes_final").fillna("").to_dict(orient="records")},
           open(web / "summary.json", "w"))
-print(f"{len(recs)} papers, {len(sites)} sites, {len(feats)} mapped; best flag:",
-      papers.best_coord_flag.value_counts().to_dict(), "| no LME:", int((papers.lmes_final.str.len() == 0).sum()),
+print(f"{len(recs)} papers, {len(sites)} sites, {len(feats)} mapped; site precision:", sites.precision.value_counts().to_dict(),
+      "| paper best precision:", papers.best_precision.value_counts().to_dict(), "| no LME:", int((papers.lmes_final.str.len() == 0).sum()),
       "| polygon/guess disagree:", int(papers.lme_disagree.sum()))

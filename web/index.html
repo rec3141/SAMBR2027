@@ -64,10 +64,10 @@ label.chk{font-size:13px;color:var(--text-secondary);display:inline-flex;gap:6px
 .bbox{fill:var(--lme-fill);stroke:var(--series);stroke-width:1.5;stroke-dasharray:5 3;pointer-events:none}
 .site{stroke:var(--pt-ring);stroke-width:1.2;cursor:pointer}
 .site.exact{fill:var(--series)}
-.site.approx{fill:var(--ocean);stroke:var(--series);stroke-width:2.2}
-.site.off{opacity:.18}
+.site.local{fill:var(--ocean);stroke:var(--series);stroke-width:2.2}
+.site.off{opacity:.05}
 .site.on{stroke-width:2.4}
-.site.estimated{fill:none;stroke:var(--series);stroke-width:1.6;stroke-dasharray:2.5 1.5;opacity:.85}
+.site.regional{fill:none;stroke:var(--series);stroke-width:1.6;stroke-dasharray:2.5 1.5;opacity:.85}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--text-secondary);margin-top:8px}
 .legend svg{vertical-align:middle;margin-right:4px}
 .stats{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px}
@@ -102,16 +102,16 @@ a{color:var(--series)}
   <div class="controls" role="toolbar" aria-label="Filters">
     <span><span class="lbl">FEC</span><span class="seg" id="fecSeg"></span></span>
     <span><span class="lbl">Observation span</span><span class="seg" id="durSeg"></span></span>
-    <label class="chk"><input type="checkbox" id="showEst" checked> Estimated sites</label>
+    <label class="chk"><input type="checkbox" id="showEst" checked> Regional sites</label>
   </div>
   <div class="grid">
     <section class="card" aria-label="Map">
       <div class="stats" id="stats"></div>
       <div id="map"></div>
       <div class="legend">
-        <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" class="site exact"/></svg>Exact (printed in paper)</span>
-        <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" class="site approx"/></svg>Approximate (map or range)</span>
-        <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" class="site estimated"/></svg>Estimated (from place name)</span>
+        <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" class="site exact"/></svg>Exact (printed coordinates)</span>
+        <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" class="site local"/></svg>Local (~tens of km)</span>
+        <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" class="site regional"/></svg>Regional (basin scale)</span>
         <span><svg width="16" height="12"><rect x="1" y="1" width="14" height="10" class="bbox"/></svg>Study-area box (click a site)</span>
       </div>
     </section>
@@ -223,7 +223,7 @@ Promise.all([
     fecSeg.selectAll("button").attr("aria-pressed",function(){return this.dataset.k===state.fec});
     durSeg.selectAll("button").attr("aria-pressed",function(){return this.dataset.k===state.dur});
     gL.selectAll("path").classed("sel",d=>d.properties.label===state.lme);
-    const feats=sites.features.filter(f=>{const p=byKey[f.properties.citekey];return p&&okPaper(p)&&(state.est||f.properties.coord_flag!=="estimated")});
+    const feats=sites.features.filter(f=>{const p=byKey[f.properties.citekey];return p&&okPaper(p)&&(state.est||f.properties.precision!=="regional")});
     const boxes=state.sel?feats.filter(f=>f.properties.citekey===state.sel&&f.properties.lat_min!=null&&f.properties.lat_max!=null&&f.properties.lon_min!=null&&f.properties.lon_max!=null):[];
     gB.selectAll("path").data(boxes,d=>d.properties.citekey+d.properties.site_no).join("path").attr("class","bbox")
       .attr("d",d=>{const p=d.properties;const lo1=p.lon_max<p.lon_min?p.lon_max+360:p.lon_max;const n=24,ring=[];
@@ -234,17 +234,17 @@ Promise.all([
         return path(poly)});
     const pts=feats.filter(f=>f.properties.geom!=="bbox"||f.properties.lat!=null);
     gS.selectAll("circle").data(pts,d=>d.properties.citekey+d.properties.site_no).join("circle")
-      .attr("class",d=>"site "+(d.properties.coord_flag||"estimated")+(state.sel?(d.properties.citekey===state.sel?" on":" off"):""))
+      .attr("class",d=>"site "+(d.properties.precision||"regional")+(state.sel?(d.properties.citekey===state.sel?" on":" off"):""))
       .attr("r",4.5/K)
       .attr("transform",d=>{const xy=proj(d.geometry.coordinates);return xy?`translate(${xy})`:"translate(-99,-99)"})
-      .on("mousemove",(e,d)=>{const s=d.properties,p=byKey[s.citekey];showTip(e,`<b>${esc(s.citekey)}</b> · ${esc(FEC_SHORT[s.fec]||"")}<br>${esc(p.title)}<br><span class="m">${esc(s.site)} · ${s.lat??""}, ${s.lon??""} · ${esc(s.coord_flag)} (${esc(s.coord_source)})<br>${esc(s.lme_polygon||p.lme_agent_guess)}${s.obs_duration?" · obs "+esc(s.obs_duration):""}</span>`)})
+      .on("mousemove",(e,d)=>{const s=d.properties,p=byKey[s.citekey];showTip(e,`<b>${esc(s.citekey)}</b> · ${esc(FEC_SHORT[s.fec]||"")}<br>${esc(p.title)}<br><span class="m">${esc(s.site)} · ${s.lat??""}, ${s.lon??""} · ${esc(s.precision)} (${esc(s.coord_flag)}, ${esc(s.coord_source)})<br>${esc(s.lme_polygon||p.lme_agent_guess)}${s.obs_duration?" · obs "+esc(s.obs_duration):""}</span>`)})
       .on("mouseleave",hideTip)
       .on("click",(e,d)=>{e.stopPropagation();const k=d.properties.citekey;
         if(state.sel===k){state.sel=null;state.q="";document.getElementById("q").value=""}
         else{state.sel=k;state.q=k.toLowerCase();document.getElementById("q").value=k}
         render()});
     const sel=papers.filter(okPaper);
-    const nPts=pts.length, nEx=sel.filter(p=>p.best_coord_flag==="exact").length;
+    const nPts=pts.length, nEx=sel.filter(p=>p.best_precision==="exact").length;
     d3.select("#stats").html([[sel.length,"papers"],[nPts,"sites shown"],[nEx,"papers with exact coordinates"],[sel.filter(p=>p.coords_in_supplement==="True"||p.coords_in_supplement===true).length,"station lists in supplements"]]
       .map(([v,k])=>`<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join(""));
     renderHeat(); renderList();
@@ -274,7 +274,7 @@ Promise.all([
       sel=sel.filter(p=>{const hay=(p.citekey+" "+p.title+" "+p.region_text+" "+p.authors+" "+p.journal+" "+p.year).toLowerCase();return terms.every(t=>hay.includes(t))});}
     d3.select("#listTitle").text(`Papers (${sel.length})${state.q?" — search across all papers":state.lme?" — "+state.lme:""}`);
     const t=d3.select("#papers").html("");
-    t.append("thead").append("tr").selectAll("th").data(["Citekey","Authors","FEC","Title","Region","LMEs","Coords","Obs","Links"]).join("th").text(d=>d);
+    t.append("thead").append("tr").selectAll("th").data(["Citekey","Authors","FEC","Title","Region","LMEs","Precision","Obs","Links"]).join("th").text(d=>d);
     const doiUrl=d=>d?("https://doi.org/"+encodeURI(d.replace(/^https?:\/\/(dx\.)?doi\.org\//,""))):"";
     t.append("tbody").selectAll("tr").data(sel.slice(0,400)).join("tr").attr("class",p=>p.citekey===state.sel?"selrow":null).html(p=>{
       const links=[p.doi?`<a href="${esc(doiUrl(p.doi))}" target="_blank" rel="noopener">DOI</a>`:"",
@@ -284,7 +284,7 @@ Promise.all([
       const auShort=au.length>3?au.slice(0,3).join("; ")+" et al.":au.join("; ");
       const hl=state.q?au.filter(a=>state.q.split(/\s+/).some(t=>t&&a.toLowerCase().includes(t))):[];
       const auCell=esc(auShort)+(hl.length&&!hl.every(h=>au.slice(0,3).includes(h))?` <span class="m">… ${esc(hl.filter(h=>!au.slice(0,3).includes(h)).slice(0,2).join("; "))}</span>`:"");
-      return `<td>${esc(p.citekey)}</td><td class="au" title="${esc(au.join("; "))}">${auCell}</td><td>${esc(FEC_SHORT[p.fec]||"")}</td><td>${esc(p.title)}${p.year?` <span class="m">(${esc(p.year)}${p.journal?", "+esc(p.journal):""})</span>`:""}</td><td>${esc(p.region_text)}</td><td>${esc(p._lmes.map(l=>l.split(". ")[0]).join(", "))}</td><td>${esc(p.best_coord_flag)}${(p.coords_in_supplement===true||p.coords_in_supplement==="True")?" · suppl.":""}</td><td>${esc(p.obs_duration)}</td><td style="white-space:nowrap">${links}</td>`});
+      return `<td>${esc(p.citekey)}</td><td class="au" title="${esc(au.join("; "))}">${auCell}</td><td>${esc(FEC_SHORT[p.fec]||"")}</td><td>${esc(p.title)}${p.year?` <span class="m">(${esc(p.year)}${p.journal?", "+esc(p.journal):""})</span>`:""}</td><td>${esc(p.region_text)}</td><td>${esc(p._lmes.map(l=>l.split(". ")[0]).join(", "))}</td><td>${esc(p.best_precision)}${(p.coords_in_supplement===true||p.coords_in_supplement==="True")?" · suppl.":""}</td><td>${esc(p.obs_duration)}</td><td style="white-space:nowrap">${links}</td>`});
   }
   render();
 });
