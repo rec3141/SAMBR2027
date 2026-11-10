@@ -90,6 +90,9 @@ def split_antimeridian(g):
 lme = gpd.GeoDataFrame({"lme": lme_p["lme"].values}, geometry=[split_antimeridian(g) for g in lme_p.geometry], crs=4326)
 
 dur = {r["citekey"]: r for r in csv.DictReader(open(PROJ / "5_manuscript/plankton_pdf_duration_classes.csv"))}
+for _r in dur.values():  # portal classes: 1yr / 2yr / 3plus / tbd (nonobs + unclear)
+    if _r.get("duration_class") not in ("1yr", "2yr", "3plus"):
+        _r["duration_class"] = "tbd"
 lib = {r["citekey"]: r for r in csv.DictReader(open(PROJ / "5_manuscript/plankton_library_scored.csv"))}
 # full author lists come from the bib (the scored CSV truncates after six names)
 BIB_AUTH = {}
