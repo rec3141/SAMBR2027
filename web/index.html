@@ -62,12 +62,12 @@ label.chk{font-size:13px;color:var(--text-secondary);display:inline-flex;gap:6px
 .lme{fill:transparent;stroke:var(--lme-line);stroke-width:1;cursor:pointer}
 .lme:hover,.lme.sel{fill:var(--lme-fill);stroke:var(--lme-hover);stroke-width:2}
 .bbox{fill:var(--lme-fill);stroke:var(--series);stroke-width:1.5;stroke-dasharray:5 3;pointer-events:none}
-.site{stroke:var(--pt-ring);stroke-width:1.2;cursor:pointer}
+.site{stroke:var(--pt-ring);stroke-width:1.2;cursor:pointer;pointer-events:all}
 .site.exact{fill:var(--series)}
-.site.local{fill:var(--ocean);stroke:var(--series);stroke-width:2.2}
+.site.local{fill:var(--ocean);fill-opacity:.35;stroke:var(--series);stroke-width:2.6;pointer-events:all}
 circle.site.off{opacity:.06;pointer-events:none}
 .site.on{stroke-width:2.4}
-.site.regional{fill:none;stroke:var(--series);stroke-width:1.6;stroke-dasharray:2.5 1.5;opacity:.85}
+.site.regional{fill:var(--ocean);fill-opacity:0;stroke:var(--series);stroke-width:1;pointer-events:all}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--text-secondary);margin-top:8px}
 .legend svg{vertical-align:middle;margin-right:4px}
 .stats{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px}
