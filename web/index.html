@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAMBR 2027 Plankton</title>
+<meta name="description" content="Where Arctic plankton has been studied since 2017: sampling locations from the CBMP Plankton Expert Network literature review, by Focal Ecosystem Component and Large Marine Ecosystem.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:light;
+  --surface-0:#f4f4f1; --surface-1:#fcfcfb; --border:#dcdbd5; --grid:#e6e5e0;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#7a7974;
+  --land:#d6d3c8; --land-line:#bdb9ab; --ocean:#e6eff8; --lme-line:#6f8fb3; --lme-hover:#1c5cab; --lme-fill:rgba(42,120,214,.12);
+  --series:#d4541f; --pt-ring:#ffffff; --bbox-line:rgba(212,84,31,.55);
+  --seq-0:#eef4fc; --seq-1:#cde2fb; --seq-2:#9ec5f4; --seq-3:#6da7ec; --seq-4:#3987e5; --seq-5:#256abf; --seq-6:#184f95; --seq-7:#0d366b;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --surface-0:#121211; --surface-1:#1a1a19; --border:#33332f; --grid:#2a2a27;
+    --text-primary:#f0efec; --text-secondary:#c3c2b7; --text-muted:#8f8e86;
+    --land:#4a4943; --land-line:#5d5c55; --ocean:#14243a; --lme-line:#4f6f96; --lme-hover:#86b6ef; --lme-fill:rgba(134,182,239,.14);
+    --series:#f08a4b; --pt-ring:#14243a; --bbox-line:rgba(240,138,75,.6);
+    --seq-0:#1f2630; --seq-1:#0d366b; --seq-2:#104281; --seq-3:#184f95; --seq-4:#256abf; --seq-5:#3987e5; --seq-6:#6da7ec; --seq-7:#b7d3f6;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --surface-0:#121211; --surface-1:#1a1a19; --border:#33332f; --grid:#2a2a27;
+  --text-primary:#f0efec; --text-secondary:#c3c2b7; --text-muted:#8f8e86;
+  --land:#4a4943; --land-line:#5d5c55; --ocean:#14243a; --lme-line:#4f6f96; --lme-hover:#86b6ef; --lme-fill:rgba(134,182,239,.14);
+  --series:#f08a4b; --pt-ring:#14243a; --bbox-line:rgba(240,138,75,.6);
+  --seq-0:#1f2630; --seq-1:#0d366b; --seq-2:#104281; --seq-3:#184f95; --seq-4:#256abf; --seq-5:#3987e5; --seq-6:#6da7ec; --seq-7:#b7d3f6;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface-0);color:var(--text-primary);font:14px/1.5 Inter,system-ui,sans-serif}
+header,main,footer{max-width:1240px;margin:0 auto;padding:0 16px}
+header{padding-top:28px}
+h1{font-size:24px;font-weight:600;margin:0 0 4px}
+h2{font-size:16px;font-weight:600;margin:0 0 8px}
+.sub{color:var(--text-secondary);margin:0 0 16px;max-width:820px}
+.controls{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:8px 0 16px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface-1)}
+.seg button{border:0;background:none;color:var(--text-secondary);font:inherit;font-size:13px;padding:6px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--text-primary);color:var(--surface-1)}
+.seg button:not([aria-pressed="true"]):hover{background:var(--grid)}
+.lbl{font-size:12px;color:var(--text-muted);margin-right:4px}
+label.chk{font-size:13px;color:var(--text-secondary);display:inline-flex;gap:6px;align-items:center}
+.grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px}
+#map svg{width:100%;height:auto;display:block;cursor:grab}
+#map path,#map circle{vector-effect:non-scaling-stroke}
+.rotbar{position:absolute;top:8px;left:8px;display:flex;gap:2px;flex-wrap:wrap;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:2px}
+.rotbar button{border:0;background:none;color:var(--text-secondary);font:inherit;font-size:12px;padding:3px 7px;border-radius:6px;cursor:pointer}
+.rotbar button:hover{background:var(--grid);color:var(--text-primary)}
+.resetbtn{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-primary);cursor:pointer}
+.land{fill:var(--land);stroke:var(--land-line);stroke-width:.4}
+.graticule{fill:none;stroke:var(--lme-line);stroke-opacity:.35;stroke-width:.5}
+.lme{fill:transparent;stroke:var(--lme-line);stroke-width:1;cursor:pointer}
+.lme:hover,.lme.sel{fill:var(--lme-fill);stroke:var(--lme-hover);stroke-width:2}
+.bbox{fill:var(--lme-fill);stroke:var(--series);stroke-width:1.5;stroke-dasharray:5 3;pointer-events:none}
+.site{stroke:var(--pt-ring);stroke-width:1.2;cursor:pointer}
+.site.exact{fill:var(--series)}
+.site.approx{fill:var(--ocean);stroke:var(--series);stroke-width:2.2}
+.site.off{opacity:.18}
+.site.on{stroke-width:2.4}
+.site.estimated{fill:none;stroke:var(--series);stroke-width:1.6;stroke-dasharray:2.5 1.5;opacity:.85}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--text-secondary);margin-top:8px}
+.legend svg{vertical-align:middle;margin-right:4px}
+.stats{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px}
+.stat .v{font-size:22px;font-weight:600}
+.stat .k{font-size:12px;color:var(--text-muted)}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th,td{padding:4px 6px;text-align:left;border-bottom:1px solid var(--grid)}
+th{color:var(--text-muted);font-weight:500}
+.heat th{font-size:11px;padding:3px 4px;white-space:nowrap}
+.heat td.c{padding:3px 0;min-width:22px;text-align:center;font-variant-numeric:tabular-nums;border:2px solid var(--surface-1);border-radius:4px;cursor:default}
+.heat th.lme{text-align:center;font-size:11px;padding:4px 2px}
+.lmekey{font-size:11px;color:var(--text-muted);columns:2;margin-top:8px}
+.scroll{overflow-x:auto}
+#tip{position:fixed;pointer-events:none;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;max-width:340px;box-shadow:0 4px 16px rgba(0,0,0,.12);display:none;z-index:10}
+#tip b{font-weight:600}
+#tip .m{color:var(--text-muted)}
+#papers td:first-child{white-space:nowrap;font-weight:500}
+#papers .m{color:var(--text-muted)}
+#papers tr.selrow td{background:var(--lme-fill)}
+input[type=search]{font:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-primary);width:240px;max-width:100%}
+footer{color:var(--text-muted);font-size:12px;padding:24px 16px 40px}
+a{color:var(--series)}
+</style>
+</head>
+<body>
+<header>
+  <h1>SAMBR 2027 Plankton</h1>
+  <p class="sub">Where Arctic plankton has been studied: sampling locations from the CAFF CBMP Plankton Expert Network literature review (relevance score 4–5 papers, 2017–2026 plus baselines), by Focal Ecosystem Component (FEC) and Arctic Large Marine Ecosystem (LME). Interim LME boundaries: PAME 2013.</p>
+</header>
+<main>
+  <div class="controls" role="toolbar" aria-label="Filters">
+    <span><span class="lbl">FEC</span><span class="seg" id="fecSeg"></span></span>
+    <span><span class="lbl">Observation span</span><span class="seg" id="durSeg"></span></span>
+    <label class="chk"><input type="checkbox" id="showEst" checked> Estimated sites</label>
+  </div>
+  <div class="grid">
+    <section class="card" aria-label="Map">
+      <div class="stats" id="stats"></div>
+      <div id="map"></div>
+      <div class="legend">
+        <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" class="site exact"/></svg>Exact (printed in paper)</span>
+        <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" class="site approx"/></svg>Approximate (map or range)</span>
+        <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" class="site estimated"/></svg>Estimated (from place name)</span>
+        <span><svg width="16" height="12"><rect x="1" y="1" width="14" height="10" class="bbox"/></svg>Study-area box (click a site)</span>
+      </div>
+    </section>
+    <section class="card" aria-label="Papers by FEC and LME">
+      <h2>Papers per FEC and LME</h2>
+      <p class="sub" style="font-size:12px;margin-bottom:8px">Number of papers with at least one site in each LME. Click an LME on the map (double-click to zoom) or a column number to list its papers.</p>
+      <div class="scroll"><table class="heat" id="heat"></table></div>
+      <div class="lmekey" id="lmekey"></div>
+    </section>
+  </div>
+  <section class="card" style="margin-top:16px" aria-label="Paper list">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <h2 id="listTitle" style="margin:0">Papers</h2>
+      <input type="search" id="q" placeholder="Filter by citekey, title, region" aria-label="Filter papers">
+    </div>
+    <div class="scroll"><table id="papers"></table></div>
+  </section>
+</main>
+<footer>Coordinates extracted from full texts by LLM agents and flagged by precision; check the paper before reuse. PDF links open the Plankton EN Google Drive (members only). Data &amp; code: <a href="https://github.com/rec3141/SAMBR2027">github.com/rec3141/SAMBR2027</a>. Downloads: <a href="data/sites.geojson">sites.geojson</a> · <a href="data/plankton_sites.csv">plankton_sites.csv</a> · <a href="data/plankton_papers_geo.csv">plankton_papers_geo.csv</a></footer>
+<div id="tip" role="tooltip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script>
+const FEC_SHORT={"01":"Bacteria & Archaea","02":"Viruses","03":"Microbial eukaryotes","04":"Phytoplankton","05":"Zooplankton","06":"Cross-cutting"};
+const FEC_TINY={"01":"Bact. & Arch.","02":"Viruses","03":"Microb. euk.","04":"Phyto.","05":"Zoo.","06":"Cross-cut."};
+const DURS=[["all","All"],["1yr","1 yr"],["2yr","2 yr"],["3plus","3+ yr"]];
+const state={fec:"all",dur:"all",est:true,lme:null,q:"",sel:null};
+const tip=document.getElementById("tip");
+function showTip(e,html){tip.innerHTML=html;tip.style.display="block";const x=Math.min(e.clientX+14,innerWidth-360);tip.style.left=x+"px";tip.style.top=(e.clientY+14)+"px"}
+function hideTip(){tip.style.display="none"}
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+Promise.all([
+  d3.json("data/sites.geojson"), d3.json("data/lme.geojson"), d3.json("data/summary.json"),
+  d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-50m.json")
+]).then(([sites,lme,summary,world])=>{
+  const W=720,H=720;
+  const cap=d3.geoCircle().center([0,90]).radius(39)();
+  const proj=d3.geoAzimuthalEqualArea().rotate([150,-90]).clipAngle(40).fitExtent([[6,6],[W-6,H-6]],cap);
+  const path=d3.geoPath(proj);
+  const svg=d3.select("#map").append("svg").attr("viewBox",`0 0 ${W} ${H}`).attr("role","img").attr("aria-label","Polar map of plankton sampling sites");
+  const gRoot=svg.append("g");
+  gRoot.append("path").datum(cap).attr("class","geo").attr("fill","var(--ocean)").attr("stroke","var(--border)").attr("d",path);
+  gRoot.append("path").datum(d3.geoGraticule().step([30,10])()).attr("class","geo graticule").attr("d",path);
+  const gB=gRoot.append("g");
+  gRoot.append("path").datum(topojson.feature(world,world.objects.land)).attr("class","geo land").attr("d",path);
+  const gL=gRoot.append("g"), gS=gRoot.append("g");
+  // d3 wants clockwise exterior rings; any polygon larger than a hemisphere is inverted -> rewind it
+  lme.features.forEach(f=>{const g=f.geometry;const polys=g.type==="Polygon"?[g.coordinates]:g.coordinates;
+    polys.forEach(rings=>{if(d3.geoArea({type:"Polygon",coordinates:rings})>2*Math.PI)rings.forEach(r=>r.reverse())});});
+  gL.selectAll("path").data(lme.features).join("path").attr("class","geo lme").attr("d",path)
+    .on("mousemove",(e,d)=>showTip(e,`<b>${esc(d.properties.label)}</b><br><span class="m">${countLme(d.properties.label)} papers in current filter</span>`))
+    .on("mouseleave",hideTip)
+    .on("click",(e,d)=>{state.lme=state.lme===d.properties.label?null:d.properties.label;render()})
+    .on("dblclick",(e,d)=>{e.stopPropagation();state.lme=d.properties.label;render();zoomTo(d)});
+  // pan/zoom: wheel/drag, double-click an LME to zoom to it, double-click elsewhere or Reset to zoom out
+  let K=1;
+  const zoom=d3.zoom().scaleExtent([1,12]).translateExtent([[0,0],[W,H]]).on("zoom",e=>{
+    K=e.transform.k; gRoot.attr("transform",e.transform);
+    gS.selectAll("circle").attr("r",4.5/K);
+    d3.select("#resetZoom").style("visibility",K>1.01?"visible":"hidden");
+  });
+  svg.on("click.sel",e=>{if(state.sel&&e.target.tagName!=="circle"){state.sel=null;state.q="";document.getElementById("q").value="";render()}});
+  svg.call(zoom).on("dblclick.zoom",null).on("dblclick",()=>svg.transition().duration(600).call(zoom.transform,d3.zoomIdentity));
+  function zoomTo(d){const [[x0,y0],[x1,y1]]=path.bounds(d);const k=Math.min(12,0.85/Math.max((x1-x0)/W,(y1-y0)/H));
+    svg.transition().duration(750).call(zoom.transform,d3.zoomIdentity.translate(W/2,H/2).scale(k).translate(-(x0+x1)/2,-(y0+y1)/2));}
+  // rotation: the meridian at the bottom of the map is -lambda (presets put the named region at the bottom)
+  let LAM=160; proj.rotate([LAM,-90]);
+  gRoot.selectAll("path.geo").attr("d",path);
+  function rotateTo(lam,ms=900){
+    const from=LAM; let to=lam; while(to-from>180)to-=360; while(to-from<-180)to+=360; LAM=((to%360)+360)%360;
+    svg.call(zoom.transform,d3.zoomIdentity);
+    d3.transition().duration(ms).ease(d3.easeCubicInOut).tween("rot",()=>t=>{proj.rotate([from+(to-from)*t,-90]);
+      gRoot.selectAll("path.geo").attr("d",path); render();});
+  }
+  const rot=d3.select("#map").append("div").attr("class","rotbar").attr("role","group").attr("aria-label","Rotate map");
+  rot.append("button").attr("title","Rotate 30° anticlockwise").attr("aria-label","Rotate anticlockwise").text("↺").on("click",()=>rotateTo(LAM-30,450));
+  [["Europe",340],["Siberia",260],["Pacific",170],["N. America",95]].forEach(([n,l])=>rot.append("button").text(n).attr("title",n+" at bottom").on("click",()=>rotateTo(l)));
+  rot.append("button").attr("title","Rotate 30° clockwise").attr("aria-label","Rotate clockwise").text("↻").on("click",()=>rotateTo(LAM+30,450));
+  d3.select("#map").style("position","relative").append("button").attr("id","resetZoom").attr("class","resetbtn").text("Reset zoom")
+    .style("visibility","hidden").on("click",()=>svg.transition().duration(600).call(zoom.transform,d3.zoomIdentity));
+
+  const papers=summary.papers;
+  const byKey=Object.fromEntries(papers.map(p=>[p.citekey,p]));
+  const LABELS=summary.lmes; // "1. Faroe Islands" ...
+  const lmeKey=l=>l; // polygon labels already match LABELS
+  // map paper lme names (canonical) -> ODS labels by order
+  const CANON=["Faroe Plateau","Iceland Shelf","Greenland Sea-East Greenland","Norwegian Sea","Barents Sea","Kara Sea","Laptev Sea","East Siberian Sea","East Bering Sea","Aleutian Islands","West Bering Sea","Northern Bering-Chukchi Sea","Central Arctic Ocean","Beaufort Sea","Canadian High Arctic-North Greenland","Baffin Bay","Hudson Bay","Labrador-Newfoundland"];
+  const toLabel=Object.fromEntries(CANON.map((c,i)=>[c,LABELS[i]]));
+  papers.forEach(p=>{
+    let ls=(p.lme_polygon||"").split("; ").filter(Boolean);
+    if(!ls.length) ls=(p.lme_agent_guess||"").split("; ").filter(x=>toLabel[x]);
+    p._lmes=ls.map(x=>toLabel[x]).filter(Boolean);
+  });
+
+  d3.select("#lmekey").html(LABELS.map(esc).join("<br>"));
+  const fecSeg=d3.select("#fecSeg");
+  [["all","All"],...Object.entries(FEC_SHORT)].forEach(([k,v])=>fecSeg.append("button").attr("data-k",k).text(v).on("click",()=>{state.fec=k;render()}));
+  const durSeg=d3.select("#durSeg");
+  DURS.forEach(([k,v])=>durSeg.append("button").attr("data-k",k).text(v).on("click",()=>{state.dur=k;render()}));
+  d3.select("#showEst").on("change",function(){state.est=this.checked;render()});
+  d3.select("#q").on("input",function(){state.q=this.value.toLowerCase();renderList()});
+
+  const okPaper=p=>(state.fec==="all"||p.fec===state.fec)&&(state.dur==="all"||p.obs_duration===state.dur);
+  function countLme(label){return papers.filter(p=>okPaper(p)&&p._lmes.includes(label)).length}
+
+  function render(){
+    fecSeg.selectAll("button").attr("aria-pressed",function(){return this.dataset.k===state.fec});
+    durSeg.selectAll("button").attr("aria-pressed",function(){return this.dataset.k===state.dur});
+    gL.selectAll("path").classed("sel",d=>d.properties.label===state.lme);
+    const feats=sites.features.filter(f=>{const p=byKey[f.properties.citekey];return p&&okPaper(p)&&(state.est||f.properties.coord_flag!=="estimated")});
+    const boxes=state.sel?feats.filter(f=>f.properties.citekey===state.sel&&f.properties.lat_min!=null&&f.properties.lat_max!=null&&f.properties.lon_min!=null&&f.properties.lon_max!=null):[];
+    gB.selectAll("path").data(boxes,d=>d.properties.citekey+d.properties.site_no).join("path").attr("class","bbox")
+      .attr("d",d=>{const p=d.properties;const lo1=p.lon_max<p.lon_min?p.lon_max+360:p.lon_max;const n=24,ring=[];
+        for(let i=0;i<=n;i++)ring.push([p.lon_min+(lo1-p.lon_min)*i/n,p.lat_min]);
+        for(let i=0;i<=n;i++)ring.push([lo1-(lo1-p.lon_min)*i/n,p.lat_max]);ring.push(ring[0]);
+        let poly={type:"Polygon",coordinates:[ring]};
+        if(d3.geoArea(poly)>2*Math.PI) poly={type:"Polygon",coordinates:[ring.slice().reverse()]};
+        return path(poly)});
+    const pts=feats.filter(f=>f.properties.geom!=="bbox"||f.properties.lat!=null);
+    gS.selectAll("circle").data(pts,d=>d.properties.citekey+d.properties.site_no).join("circle")
+      .attr("class",d=>"site "+(d.properties.coord_flag||"estimated")+(state.sel?(d.properties.citekey===state.sel?" on":" off"):""))
+      .attr("r",4.5/K)
+      .attr("transform",d=>{const xy=proj(d.geometry.coordinates);return xy?`translate(${xy})`:"translate(-99,-99)"})
+      .on("mousemove",(e,d)=>{const s=d.properties,p=byKey[s.citekey];showTip(e,`<b>${esc(s.citekey)}</b> · ${esc(FEC_SHORT[s.fec]||"")}<br>${esc(p.title)}<br><span class="m">${esc(s.site)} · ${s.lat??""}, ${s.lon??""} · ${esc(s.coord_flag)} (${esc(s.coord_source)})<br>${esc(s.lme_polygon||p.lme_agent_guess)}${s.obs_duration?" · obs "+esc(s.obs_duration):""}</span>`)})
+      .on("mouseleave",hideTip)
+      .on("click",(e,d)=>{e.stopPropagation();const k=d.properties.citekey;
+        if(state.sel===k){state.sel=null;state.q="";document.getElementById("q").value=""}
+        else{state.sel=k;state.q=k.toLowerCase();document.getElementById("q").value=k}
+        render()});
+    const sel=papers.filter(okPaper);
+    const nPts=pts.length, nEx=sel.filter(p=>p.best_coord_flag==="exact").length;
+    d3.select("#stats").html([[sel.length,"papers"],[nPts,"sites shown"],[nEx,"papers with exact coordinates"],[sel.filter(p=>p.coords_in_supplement==="True"||p.coords_in_supplement===true).length,"station lists in supplements"]]
+      .map(([v,k])=>`<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join(""));
+    renderHeat(); renderList();
+  }
+
+  function renderHeat(){
+    const fecs=Object.keys(FEC_SHORT);
+    const rows=fecs.map(f=>({f,c:LABELS.map(l=>papers.filter(p=>p.fec===f&&(state.dur==="all"||p.obs_duration===state.dur)&&p._lmes.includes(l)).length)}));
+    const max=d3.max(rows,r=>d3.max(r.c))||1;
+    const steps=["--seq-0","--seq-1","--seq-2","--seq-3","--seq-4","--seq-5","--seq-6","--seq-7"];
+    const col=v=>v===0?"transparent":`var(${steps[Math.min(7,1+Math.floor(6*v/max))]})`;
+    const ink=v=>v/max>0.45?"#fff":"var(--text-primary)";
+    const t=d3.select("#heat").html("");
+    const hr=t.append("thead").append("tr");hr.append("th").text("FEC");
+    LABELS.forEach(l=>hr.append("th").attr("class","lme").attr("title",l).style("cursor","pointer").style("color",l===state.lme?"var(--text-primary)":"var(--text-muted)").text(l.split(". ")[0]).on("click",()=>{state.lme=state.lme===l?null:l;render()}));
+    const tb=t.append("tbody");
+    rows.forEach(r=>{const tr=tb.append("tr").style("opacity",state.fec==="all"||state.fec===r.f?1:.35);tr.append("th").attr("title",FEC_SHORT[r.f]).text(FEC_TINY[r.f]);
+      r.c.forEach((v,i)=>tr.append("td").attr("class","c").style("background",col(v)).style("color",ink(v)).text(v||"")
+        .on("mousemove",e=>showTip(e,`<b>${esc(FEC_SHORT[r.f])}</b> · ${esc(LABELS[i])}<br>${v} papers`)).on("mouseleave",hideTip))});
+  }
+
+  function renderList(){
+    let sel=papers.filter(okPaper);
+    if(state.lme) sel=sel.filter(p=>p._lmes.includes(state.lme));
+    if(state.q) sel=sel.filter(p=>(p.citekey+" "+p.title+" "+p.region_text).toLowerCase().includes(state.q));
+    d3.select("#listTitle").text(`Papers (${sel.length})${state.lme?" — "+state.lme:""}`);
+    const t=d3.select("#papers").html("");
+    t.append("thead").append("tr").selectAll("th").data(["Citekey","FEC","Title","Region","LMEs","Coords","Obs","Links"]).join("th").text(d=>d);
+    const doiUrl=d=>d?("https://doi.org/"+encodeURI(d.replace(/^https?:\/\/(dx\.)?doi\.org\//,""))):"";
+    t.append("tbody").selectAll("tr").data(sel.slice(0,400)).join("tr").attr("class",p=>p.citekey===state.sel?"selrow":null).html(p=>{
+      const links=[p.doi?`<a href="${esc(doiUrl(p.doi))}" target="_blank" rel="noopener">DOI</a>`:"",
+        p.drive_pdf?`<a href="${esc(p.drive_pdf)}" target="_blank" rel="noopener" title="Google Drive (Plankton EN members)">PDF</a>`:"",
+        p.drive_pdf_en?`<a href="${esc(p.drive_pdf_en)}" target="_blank" rel="noopener" title="English translation">EN</a>`:""].filter(Boolean).join(" · ");
+      return `<td>${esc(p.citekey)}</td><td>${esc(FEC_SHORT[p.fec]||"")}</td><td>${esc(p.title)}${p.year?` <span class="m">(${esc(p.year)}${p.journal?", "+esc(p.journal):""})</span>`:""}</td><td>${esc(p.region_text)}</td><td>${esc(p._lmes.map(l=>l.split(". ")[0]).join(", "))}</td><td>${esc(p.best_coord_flag)}${(p.coords_in_supplement===true||p.coords_in_supplement==="True")?" · suppl.":""}</td><td>${esc(p.obs_duration)}</td><td style="white-space:nowrap">${links}</td>`});
+  }
+  render();
+});
+</script>
+</body>
+</html>
