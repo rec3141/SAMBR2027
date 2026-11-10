@@ -91,6 +91,7 @@ table{border-collapse:collapse;width:100%;font-size:12px}
 th,td{padding:4px 6px;text-align:left;border-bottom:1px solid var(--grid)}
 th{color:var(--text-muted);font-weight:500}
 .heat th{font-size:11px;padding:3px 4px;white-space:nowrap}
+.heat td.c:hover,.heat td.c:focus-visible{outline:2px solid var(--lme-hover);outline-offset:-2px}
 .heat td.c{padding:3px 0;min-width:22px;text-align:center;font-variant-numeric:tabular-nums;border:2px solid var(--surface-1);border-radius:4px;cursor:default}
 .heat th.lme{text-align:center;font-size:11px;padding:4px 2px}
 .lmekey{font-size:11px;color:var(--text-muted);columns:2;margin-top:8px}
@@ -139,7 +140,7 @@ a{color:var(--series)}
     </section>
     <section class="card" aria-label="Papers by FEC and LME">
       <h2>Papers per FEC and LME</h2>
-      <p class="sub" style="font-size:12px;margin-bottom:8px">Number of papers with at least one site in each LME. Click an LME on the map (double-click to zoom) or a column number to list its papers.</p>
+      <p class="sub" style="font-size:12px;margin-bottom:8px">Number of papers with at least one site in each LME. Click a cell to show that FEC on the map, zoomed to the LME. Click an LME on the map (double-click to zoom) or a column number to list its papers.</p>
       <div class="scroll"><table class="heat" id="heat"></table></div>
       <div class="lmekey" id="lmekey"></div>
     </section>
@@ -308,7 +309,9 @@ Promise.all([
     const tb=t.append("tbody");
     rows.forEach(r=>{const tr=tb.append("tr").style("opacity",state.fec==="all"||state.fec===r.f?1:.35);tr.append("th").attr("title",FEC_SHORT[r.f]).text(FEC_TINY[r.f]);
       r.c.forEach((v,i)=>tr.append("td").attr("class","c").style("background",col(v)).style("color",ink(v)).text(v||"")
-        .on("mousemove",e=>showTip(e,`<b>${esc(FEC_SHORT[r.f])}</b> · ${esc(LABELS[i])}<br>${v} papers`)).on("mouseleave",hideTip))});
+        .style("cursor","pointer").attr("tabindex",0).attr("role","button").attr("aria-label",`${FEC_SHORT[r.f]}, ${LABELS[i]}: ${v} papers. Show on map`)
+        .on("mousemove",e=>showTip(e,`<b>${esc(FEC_SHORT[r.f])}</b> · ${esc(LABELS[i])}<br>${v} papers · click to show`)).on("mouseleave",hideTip)
+        .on("click keydown",e=>{if(e.type==="keydown"&&e.key!=="Enter"&&e.key!==" ")return;e.preventDefault();hideTip();focusCell(r.f,LABELS[i])}))});
   }
 
   function renderList(){
@@ -365,6 +368,15 @@ Promise.all([
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}));
     a.download=`SAMBR2027_plankton_papers${tag?"_"+tag:""}.csv`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   });
+  // heatmap cell -> select that FEC, filter to that LME, zoom the map to it
+  function focusCell(fec,label){
+    state.fec=fec; state.lme=label; state.q=""; state.sel=null; document.getElementById("q").value="";
+    render();
+    const f=lme.features.find(d=>d.properties.label===label);
+    const m=document.getElementById("map").getBoundingClientRect();
+    if(m.top<0||m.bottom>innerHeight) document.getElementById("map").scrollIntoView({behavior:"smooth",block:"center"});
+    if(f) zoomTo(f);
+  }
   // reverse lookup: globe button in a table row selects the paper and zooms the map to its sites
   function showOnMap(k){
     state.sel=k; render();
