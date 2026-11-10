@@ -86,6 +86,7 @@ th{color:var(--text-muted);font-weight:500}
 #tip .m{color:var(--text-muted)}
 #papers td:first-child{white-space:nowrap;font-weight:500}
 #papers .m{color:var(--text-muted)}
+#papers td.au{min-width:160px;max-width:240px}
 #papers tr.selrow td{background:var(--lme-fill)}
 input[type=search]{font:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-primary);width:240px;max-width:100%}
 footer{color:var(--text-muted);font-size:12px;padding:24px 16px 40px}
@@ -124,7 +125,7 @@ a{color:var(--series)}
   <section class="card" style="margin-top:16px" aria-label="Paper list">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
       <h2 id="listTitle" style="margin:0">Papers</h2>
-      <input type="search" id="q" placeholder="Filter by citekey, title, region" aria-label="Filter papers">
+      <input type="search" id="q" placeholder="Search authors, title, region, journal, year" aria-label="Filter papers">
     </div>
     <div class="scroll"><table id="papers"></table></div>
   </section>
@@ -268,16 +269,21 @@ Promise.all([
   function renderList(){
     let sel=papers.filter(okPaper);
     if(state.lme) sel=sel.filter(p=>p._lmes.includes(state.lme));
-    if(state.q) sel=sel.filter(p=>(p.citekey+" "+p.title+" "+p.region_text).toLowerCase().includes(state.q));
+    if(state.q){const terms=state.q.split(/\s+/).filter(Boolean);
+      sel=sel.filter(p=>{const hay=(p.citekey+" "+p.title+" "+p.region_text+" "+p.authors+" "+p.journal+" "+p.year).toLowerCase();return terms.every(t=>hay.includes(t))});}
     d3.select("#listTitle").text(`Papers (${sel.length})${state.lme?" — "+state.lme:""}`);
     const t=d3.select("#papers").html("");
-    t.append("thead").append("tr").selectAll("th").data(["Citekey","FEC","Title","Region","LMEs","Coords","Obs","Links"]).join("th").text(d=>d);
+    t.append("thead").append("tr").selectAll("th").data(["Citekey","Authors","FEC","Title","Region","LMEs","Coords","Obs","Links"]).join("th").text(d=>d);
     const doiUrl=d=>d?("https://doi.org/"+encodeURI(d.replace(/^https?:\/\/(dx\.)?doi\.org\//,""))):"";
     t.append("tbody").selectAll("tr").data(sel.slice(0,400)).join("tr").attr("class",p=>p.citekey===state.sel?"selrow":null).html(p=>{
       const links=[p.doi?`<a href="${esc(doiUrl(p.doi))}" target="_blank" rel="noopener">DOI</a>`:"",
         p.drive_pdf?`<a href="${esc(p.drive_pdf)}" target="_blank" rel="noopener" title="Google Drive (Plankton EN members)">PDF</a>`:"",
         p.drive_pdf_en?`<a href="${esc(p.drive_pdf_en)}" target="_blank" rel="noopener" title="English translation">EN</a>`:""].filter(Boolean).join(" · ");
-      return `<td>${esc(p.citekey)}</td><td>${esc(FEC_SHORT[p.fec]||"")}</td><td>${esc(p.title)}${p.year?` <span class="m">(${esc(p.year)}${p.journal?", "+esc(p.journal):""})</span>`:""}</td><td>${esc(p.region_text)}</td><td>${esc(p._lmes.map(l=>l.split(". ")[0]).join(", "))}</td><td>${esc(p.best_coord_flag)}${(p.coords_in_supplement===true||p.coords_in_supplement==="True")?" · suppl.":""}</td><td>${esc(p.obs_duration)}</td><td style="white-space:nowrap">${links}</td>`});
+      const au=(p.authors||"").split(/;\s*| and /).map(x=>x.trim()).filter(Boolean);
+      const auShort=au.length>3?au.slice(0,3).join("; ")+" et al.":au.join("; ");
+      const hl=state.q?au.filter(a=>state.q.split(/\s+/).some(t=>t&&a.toLowerCase().includes(t))):[];
+      const auCell=esc(auShort)+(hl.length&&!hl.every(h=>au.slice(0,3).includes(h))?` <span class="m">… ${esc(hl.filter(h=>!au.slice(0,3).includes(h)).slice(0,2).join("; "))}</span>`:"");
+      return `<td>${esc(p.citekey)}</td><td class="au" title="${esc(au.join("; "))}">${auCell}</td><td>${esc(FEC_SHORT[p.fec]||"")}</td><td>${esc(p.title)}${p.year?` <span class="m">(${esc(p.year)}${p.journal?", "+esc(p.journal):""})</span>`:""}</td><td>${esc(p.region_text)}</td><td>${esc(p._lmes.map(l=>l.split(". ")[0]).join(", "))}</td><td>${esc(p.best_coord_flag)}${(p.coords_in_supplement===true||p.coords_in_supplement==="True")?" · suppl.":""}</td><td>${esc(p.obs_duration)}</td><td style="white-space:nowrap">${links}</td>`});
   }
   render();
 });

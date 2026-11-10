@@ -91,6 +91,13 @@ lme = gpd.GeoDataFrame({"lme": lme_p["lme"].values}, geometry=[split_antimeridia
 
 dur = {r["citekey"]: r for r in csv.DictReader(open(PROJ / "5_manuscript/plankton_pdf_duration_classes.csv"))}
 lib = {r["citekey"]: r for r in csv.DictReader(open(PROJ / "5_manuscript/plankton_library_scored.csv"))}
+# full author lists come from the bib (the scored CSV truncates after six names)
+BIB_AUTH = {}
+for _k, _b in re.findall(r"@\w+\{([^,\s]+),(.*?)\n\}", open(PROJ / "2_data/literature/references_plankton_v2.bib").read(), re.S):
+    _m = re.search(r"\bauthor\s*=\s*\{(.*?)\},?\s*\n", _b, re.S)
+    if _m:
+        _a = re.sub(r"\s+", " ", _m.group(1)).replace("{", "").replace("}", "")
+        BIB_AUTH[_k.strip()] = "; ".join(x.strip() for x in _a.split(" and ") if x.strip() and x.strip() != "others")
 _drive_f = PROJ / "2_data/literature/plankton/geo/drive_pdf_ids.json"
 drive = json.load(open(_drive_f)) if _drive_f.exists() else {}
 drive = {re.sub(r"-[123]YO", "", k): v for k, v in drive.items()}
@@ -180,7 +187,7 @@ for r in recs:
         "lme_disagree": bool(plmes) and bool(set(guess) - {"outside"}) and not (set(guess) & plmes),
         "obs_duration": d.get("duration_class", ""), "obs_years": d.get("years", ""), "notes": r.get("notes", ""),
         "refined": r.get("_refined", False), "refine_note": r.get("refine_note", ""),
-        "authors": (lib.get(k, {}).get("authors") or "")[:120], "year": lib.get(k, {}).get("year", ""),
+        "authors": BIB_AUTH.get(k) or (lib.get(k, {}).get("authors") or "").strip(), "year": lib.get(k, {}).get("year", ""),
         "journal": lib.get(k, {}).get("journal", ""), "doi": (lib.get(k, {}).get("doi") or "").strip(),
         "drive_pdf": f"https://drive.google.com/file/d/{drive[k]['id']}/view" if isinstance(drive.get(k), dict) else "",
         "drive_pdf_en": f"https://drive.google.com/file/d/{drive[k + '_EN']['id']}/view" if isinstance(drive.get(k + "_EN"), dict) else ""})
