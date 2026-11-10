@@ -9,7 +9,7 @@ Portal: **https://cryomics.org/SAMBR2027/**
 | Path | What |
 |---|---|
 | `code/geo/compile_geo.py` | Compiles agent-extracted sampling coordinates into per-FEC tables, FEC × LME matrices, GeoJSON for the map |
-| `code/ods/expand_plankton_fecs.py` | Copies the CAFF "Status of Monitoring by LME" expert-input `.ods` with the Plankton FECs expanded + a literature-evidence sheet |
+| `code/ods/expand_plankton_fecs.py` | Copies the CAFF "Status of Monitoring by LME" expert-input `.ods` with the Plankton FECs expanded + a literature-evidence sheet (the CAFF sheet itself is internal and not in this repo) |
 | `data/geo/` | `plankton_sites.csv` (one row per site), `plankton_papers_geo.csv` (one row per paper), `plankton_geo_by_FEC.xlsx`, `fec_lme_matrix.csv` |
 | `web/` | Static portal (D3 polar map); `./deploy.sh` rsyncs it to cryomics.org |
 
