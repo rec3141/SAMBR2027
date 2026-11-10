@@ -145,15 +145,41 @@ def geom_of(s):
     return None
 
 
-def lmes_for(g):
+LAEA = "+proj=laea +lat_0=90 +lon_0=0 +datum=WGS84 +units=m"
+lme_a = lme_p.to_crs(LAEA)  # equal-area, for overlap shares
+lme_a_union = lme_a.union_all() if hasattr(lme_a, "union_all") else lme_a.unary_union
+MIN_SHARE = 0.15  # an LME must hold >= 15% of a box's ocean (LME) area to count
+
+
+def _lme_order(xs):
+    return sorted(set(xs), key=lambda x: LMES.index(x) if x in LMES else 99)
+
+
+def lmes_for(g, rep=None):
+    """LMEs for a site. Points: containing LME (or nearest within 50 km). Boxes/transects: LMEs holding
+    >= MIN_SHARE of the box's area inside any LME (lines: of its length), plus the LME of the representative point."""
     if g is None:
         return []
-    gp = gpd.GeoSeries([g], crs=4326).to_crs(3995).iloc[0]
-    hit = lme_p[lme_p.intersects(gp)]["lme"].tolist()
-    if hit or g.geom_type != "Point":
-        return sorted(set(hit), key=LMES.index if all(h in LMES for h in hit) else str)
-    d = lme_p.distance(gp)
-    return [lme_p.loc[d.idxmin(), "lme"]] if d.min() < 50_000 else []
+    if g.geom_type == "Point":
+        gp = gpd.GeoSeries([g], crs=4326).to_crs(3995).iloc[0]
+        hit = lme_p[lme_p.intersects(gp)]["lme"].tolist()
+        if hit:
+            return _lme_order(hit)
+        d = lme_p.distance(gp)
+        return [lme_p.loc[d.idxmin(), "lme"]] if d.min() < 50_000 else []
+    ga = gpd.GeoSeries([g.segmentize(0.5)], crs=4326).to_crs(LAEA).iloc[0]  # edges follow parallels/meridians
+    inside = ga.intersection(lme_a_union)
+    tot = inside.area if ga.geom_type.endswith("Polygon") else inside.length
+    hit = []
+    if tot > 0:
+        for nm, geom in zip(lme_a["lme"], lme_a.geometry):
+            x = ga.intersection(geom)
+            share = (x.area if ga.geom_type.endswith("Polygon") else x.length) / tot
+            if share >= MIN_SHARE:
+                hit.append(nm)
+    if rep is not None:
+        hit += lmes_for(rep)
+    return _lme_order(hit)
 
 
 REGIONAL_NAME = re.compile(r"\b(sea|ocean|basin|gulf|strait|shelf|arctic|archipelago|region|domain|pan-arctic|compilation|transect|section|cruise|survey|area|stations)\b", re.I)
@@ -202,7 +228,9 @@ for r in recs:
                         for x in sites_in)
     for i, s in enumerate(sites_in):
         g = geom_of(s)
-        ls = lmes_for(g)
+        _la, _lo = num(s.get("lat")), num(s.get("lon"))
+        rep = Point(_lo, _la) if (g is not None and g.geom_type != "Point" and _la is not None and _lo is not None) else None
+        ls = lmes_for(g, rep)
         scale = "site"
         if is_domain(g, ls, s):
             scale, ls = "domain", []

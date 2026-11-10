@@ -282,7 +282,8 @@ Promise.all([
         let poly={type:"Polygon",coordinates:[ring]};
         if(d3.geoArea(poly)>2*Math.PI) poly={type:"Polygon",coordinates:[ring.slice().reverse()]};
         return path(poly)});
-    const pts=feats.filter(f=>f.properties.geom!=="bbox"||f.properties.lat!=null);
+    // no ring for domain-scale boxes (pan-Arctic/global) or station-table summary boxes: their "centre" is not a sampling site
+    const pts=feats.filter(f=>(f.properties.geom!=="bbox"||f.properties.lat!=null)&&f.properties.scale!=="domain"&&f.properties.scale!=="summary_box");
     gS.selectAll("circle").data(pts,d=>d.properties.citekey+d.properties.site_no).join("circle")
       .attr("class",d=>"site "+(d.properties.precision||"regional")+(state.sel?(d.properties.citekey===state.sel?" on":" off"):""))
       .attr("r",4.5/K)
