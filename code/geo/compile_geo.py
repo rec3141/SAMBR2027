@@ -114,7 +114,7 @@ for pat in ("agent_out/geo_part*.out.jsonl", "agent_out_refine/refine_*.out.json
                     print("bad line in", f.name); continue
                 r["_refined"] = "refine" in f.name
                 recs[r["citekey"]] = r
-recs = list(recs.values())
+recs = [r for r in recs.values() if r["citekey"] in dur]  # only papers still in the PDF set
 
 
 def num(x):
