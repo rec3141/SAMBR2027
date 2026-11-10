@@ -109,7 +109,6 @@ a{color:var(--series)}
   <div class="controls" role="toolbar" aria-label="Filters">
     <span><span class="lbl">FEC</span><span class="seg" id="fecSeg"></span></span>
     <span><span class="lbl">Observation span</span><span class="seg" id="durSeg"></span></span>
-    <label class="chk"><input type="checkbox" id="showEst" checked> Regional sites</label>
   </div>
   <div class="grid">
     <section class="card" aria-label="Map">
@@ -147,7 +146,7 @@ const FEC_SHORT={"01":"Bacteria & Archaea","02":"Viruses","03":"Microbial eukary
 const FEC_TINY={"01":"Bact. & Arch.","02":"Viruses","03":"Microb. euk.","04":"Phyto.","05":"Zoo.","06":"Cross-cut."};
 const GLOBE='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.7 3.9 5.9 3.9 9.5s-1.3 6.8-3.9 9.5c-2.6-2.7-3.9-5.9-3.9-9.5s1.3-6.8 3.9-9.5z"/></svg>';
 const DURS=[["all","All"],["1yr","1 yr"],["2yr","2 yr"],["3plus","3+ yr"]];
-const state={fec:"all",dur:"all",est:true,lme:null,q:"",sel:null,sort:{key:"year",dir:-1}};
+const state={fec:"all",dur:"all",lme:null,q:"",sel:null,sort:{key:"year",dir:-1}};
 const tip=document.getElementById("tip");
 function showTip(e,html){tip.innerHTML=html;tip.style.display="block";const x=Math.min(e.clientX+14,innerWidth-360);tip.style.left=x+"px";tip.style.top=(e.clientY+14)+"px"}
 function hideTip(){tip.style.display="none"}
@@ -221,7 +220,6 @@ Promise.all([
   [["all","All"],...Object.entries(FEC_SHORT)].forEach(([k,v])=>fecSeg.append("button").attr("data-k",k).text(v).on("click",()=>{state.fec=k;render()}));
   const durSeg=d3.select("#durSeg");
   DURS.forEach(([k,v])=>durSeg.append("button").attr("data-k",k).text(v).on("click",()=>{state.dur=k;render()}));
-  d3.select("#showEst").on("change",function(){state.est=this.checked;render()});
   d3.select("#q").on("input",function(){state.q=this.value.toLowerCase();renderList()});
 
   const okPaper=p=>(state.fec==="all"||p.fec===state.fec)&&(state.dur==="all"||p.obs_duration===state.dur);
@@ -231,7 +229,7 @@ Promise.all([
     fecSeg.selectAll("button").attr("aria-pressed",function(){return this.dataset.k===state.fec});
     durSeg.selectAll("button").attr("aria-pressed",function(){return this.dataset.k===state.dur});
     gL.selectAll("path").classed("sel",d=>d.properties.label===state.lme);
-    const feats=sites.features.filter(f=>{const p=byKey[f.properties.citekey];return p&&(f.properties.citekey===state.sel||(okPaper(p)&&(state.est||f.properties.precision!=="regional")))});
+    const feats=sites.features.filter(f=>{const p=byKey[f.properties.citekey];return p&&(f.properties.citekey===state.sel||okPaper(p))});
     const boxes=state.sel?feats.filter(f=>f.properties.citekey===state.sel&&f.properties.lat_min!=null&&f.properties.lat_max!=null&&f.properties.lon_min!=null&&f.properties.lon_max!=null):[];
     gB.selectAll("path").data(boxes,d=>d.properties.citekey+d.properties.site_no).join("path").attr("class","bbox")
       .attr("d",d=>{const p=d.properties;const lo1=p.lon_max<p.lon_min?p.lon_max+360:p.lon_max;const n=24,ring=[];
