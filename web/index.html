@@ -58,6 +58,18 @@ label.chk{font-size:13px;color:var(--text-secondary);display:inline-flex;gap:6px
 .rotbar button:hover{background:var(--grid);color:var(--text-primary)}
 .btn{font:inherit;font-size:13px;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-primary);cursor:pointer}
 .btn:hover{background:var(--grid)}
+dialog#reportDlg{border:1px solid var(--border);border-radius:12px;background:var(--surface-1);color:var(--text-primary);padding:20px;width:min(520px,calc(100vw - 32px))}
+dialog#reportDlg::backdrop{background:rgba(0,0,0,.45)}
+#reportForm label{display:block;font-size:13px;color:var(--text-secondary);margin:10px 0 0}
+#reportForm select,#reportForm textarea,#reportForm input{display:block;width:100%;margin-top:4px;font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface-0);color:var(--text-primary)}
+#reportForm .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:520px){#reportForm .row2{grid-template-columns:1fr}}
+#reportForm .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.rpaper{font-size:12px;color:var(--text-muted);margin:0}
+.dlgbar{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:14px}
+.dlgbar #rMsg{margin-right:auto;font-size:12px;color:var(--text-secondary)}
+.btn.primary{background:var(--text-primary);color:var(--surface-1);border-color:var(--text-primary)}
+button.flag:hover{color:var(--series)}
 .resetbtn{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-primary);cursor:pointer}
 .land{fill:var(--land);stroke:var(--land-line);stroke-width:.4}
 .graticule{fill:none;stroke:var(--lme-line);stroke-opacity:.35;stroke-width:.5}
@@ -87,7 +99,7 @@ th{color:var(--text-muted);font-weight:500}
 #tip b{font-weight:600}
 #tip .m{color:var(--text-muted)}
 #papers td:nth-child(2){white-space:nowrap;font-weight:500}
-#papers td.g{width:28px;padding:2px}
+#papers td.g{width:52px;padding:2px;white-space:nowrap}
 .tablewrap{max-height:70vh;overflow:auto;border-top:1px solid var(--grid)}
 #papers thead th{position:sticky;top:0;z-index:1;background:var(--surface-1);box-shadow:0 1px 0 var(--grid)}
 #papers th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
@@ -140,8 +152,30 @@ a{color:var(--series)}
     <div class="tablewrap"><table id="papers"></table></div>
   </section>
 </main>
-<footer>Coordinates extracted from full texts by LLM agents and flagged by precision; check the paper before reuse. PDF links open the Plankton EN Google Drive (members only). Data &amp; code: <a href="https://github.com/rec3141/SAMBR2027">github.com/rec3141/SAMBR2027</a>. Downloads: <a href="data/sites.geojson">sites.geojson</a> · <a href="data/plankton_sites.csv">plankton_sites.csv</a> · <a href="data/plankton_papers_geo.csv">plankton_papers_geo.csv</a></footer>
+<footer>Coordinates extracted from full texts by LLM agents and flagged by precision; check the paper before reuse. PDF links open the Plankton EN Google Drive (members only). Data &amp; code: <a href="https://github.com/rec3141/SAMBR2027">github.com/rec3141/SAMBR2027</a>. <a href="#" id="reportGeneral">Report a problem or a missing paper</a> · Downloads: <a href="data/sites.geojson">sites.geojson</a> · <a href="data/plankton_sites.csv">plankton_sites.csv</a> · <a href="data/plankton_papers_geo.csv">plankton_papers_geo.csv</a></footer>
 <div id="tip" role="tooltip"></div>
+<dialog id="reportDlg" aria-labelledby="rTitle">
+  <form id="reportForm">
+    <h2 id="rTitle">Report incorrect data</h2>
+    <p id="rPaper" class="rpaper"></p>
+    <input type="hidden" name="citekey"><input type="hidden" name="context">
+    <label class="hp" aria-hidden="true">Website <input name="website" tabindex="-1" autocomplete="off"></label>
+    <label>What is wrong?
+      <select name="type" required>
+        <option value="location">Sampling location / coordinates</option>
+        <option value="lme">LME assignment</option>
+        <option value="fec">FEC assignment</option>
+        <option value="obs_span">Observation span (years)</option>
+        <option value="metadata">Title, authors, year, journal, DOI or PDF</option>
+        <option value="missing_paper">A paper is missing</option>
+        <option value="other">Other</option>
+      </select></label>
+    <label>Details <textarea name="details" rows="5" required maxlength="4000" placeholder="e.g. Stations are in Table 2: 78.9N 11.9E …"></textarea></label>
+    <div class="row2"><label>Your name (optional) <input name="name" maxlength="120" autocomplete="name"></label>
+    <label>Email (optional) <input name="email" type="email" maxlength="160" autocomplete="email"></label></div>
+    <div class="dlgbar"><span id="rMsg" role="status"></span><button type="button" id="rCancel" class="btn">Cancel</button><button type="submit" class="btn primary">Send report</button></div>
+  </form>
+</dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
@@ -149,6 +183,7 @@ a{color:var(--series)}
 const FEC_SHORT={"01":"Bacteria & Archaea","02":"Viruses","03":"Microbial eukaryotes","04":"Phytoplankton","05":"Zooplankton","06":"Cross-cutting"};
 const FEC_TINY={"01":"Bact. & Arch.","02":"Viruses","03":"Microb. euk.","04":"Phyto.","05":"Zoo.","06":"Cross-cut."};
 const GLOBE='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.7 3.9 5.9 3.9 9.5s-1.3 6.8-3.9 9.5c-2.6-2.7-3.9-5.9-3.9-9.5s1.3-6.8 3.9-9.5z"/></svg>';
+const FLAG='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>';
 const DURS=[["all","All"],["1yr","1 yr"],["2yr","2 yr"],["3plus","3+ yr"],["tbd","TBD"]];
 const state={fec:"all",dur:"all",lme:null,q:"",sel:null,sort:{key:"year",dir:-1}};
 const tip=document.getElementById("tip");
@@ -312,7 +347,8 @@ Promise.all([
       const hl=state.q?au.filter(a=>state.q.split(/\s+/).some(t=>t&&a.toLowerCase().includes(t))):[];
       const auCell=esc(auShort)+(hl.length&&!hl.every(h=>au.slice(0,3).includes(h))?` <span class="m">… ${esc(hl.filter(h=>!au.slice(0,3).includes(h)).slice(0,2).join("; "))}</span>`:"");
       const globe=p.n_sites>0?`<button class="globe" data-k="${esc(p.citekey)}" title="Show on map" aria-label="Show ${esc(p.citekey)} on map">${GLOBE}</button>`:"";
-      return `<td class="g">${globe}</td><td>${esc(p.citekey)}</td><td class="au" title="${esc(au.join("; "))}">${auCell}</td><td>${esc(p.year)}</td><td>${esc(FEC_SHORT[p.fec]||"")}</td><td>${esc(p.title)}${p.journal?` <span class="m">${esc(p.journal)}</span>`:""}</td><td>${esc(p.region_text)}</td><td>${esc(p._lmes.map(l=>l.split(". ")[0]).join(", "))}</td><td>${esc(p.best_precision)}${(p.coords_in_supplement===true||p.coords_in_supplement==="True")?" · suppl.":""}</td><td>${esc(p.obs_duration)}</td><td style="white-space:nowrap">${links}</td>`});
+      const flag=`<button class="globe flag" data-k="${esc(p.citekey)}" title="Report incorrect data" aria-label="Report incorrect data for ${esc(p.citekey)}">${FLAG}</button>`;
+      return `<td class="g">${globe}${flag}</td><td>${esc(p.citekey)}</td><td class="au" title="${esc(au.join("; "))}">${auCell}</td><td>${esc(p.year)}</td><td>${esc(FEC_SHORT[p.fec]||"")}</td><td>${esc(p.title)}${p.journal?` <span class="m">${esc(p.journal)}</span>`:""}</td><td>${esc(p.region_text)}</td><td>${esc(p._lmes.map(l=>l.split(". ")[0]).join(", "))}</td><td>${esc(p.best_precision)}${(p.coords_in_supplement===true||p.coords_in_supplement==="True")?" · suppl.":""}</td><td>${esc(p.obs_duration)}</td><td style="white-space:nowrap">${links}</td>`});
   }
   // export the currently listed papers (same filter + sort as the table)
   let lastSel=[];
@@ -341,7 +377,29 @@ Promise.all([
     document.getElementById("map").scrollIntoView({behavior:"smooth",block:"center"});
     zoomTo(geo,6);
   }
-  d3.select("#papers").on("click",e=>{const b=e.target.closest("button.globe");if(b){e.stopPropagation();showOnMap(b.dataset.k)}});
+  d3.select("#papers").on("click",e=>{const f=e.target.closest("button.flag");if(f){e.stopPropagation();openReport(f.dataset.k);return}
+    const b=e.target.closest("button.globe");if(b){e.stopPropagation();showOnMap(b.dataset.k)}});
+  // report incorrect data -> report.php (stored server-side, outside the web root)
+  const dlg=document.getElementById("reportDlg"), frm=document.getElementById("reportForm"), msg=document.getElementById("rMsg");
+  function openReport(k){
+    const p=byKey[k]; frm.reset(); msg.textContent=""; frm.querySelector("button[type=submit]").disabled=false;
+    frm.citekey.value=k||"";
+    document.getElementById("rPaper").textContent=p?`${p.citekey} · ${p.title}`:"General report (e.g. a missing paper)";
+    frm.context.value=p?`FEC ${p.fec}; LMEs ${p._lmes.map(l=>l.split(". ")[0]).join(",")}; precision ${p.best_precision}; span ${p.obs_duration}; region: ${p.region_text}`.slice(0,600):"";
+    try{const saved=JSON.parse(localStorage.getItem("sambrReporter")||"{}");frm.name.value=saved.name||"";frm.email.value=saved.email||""}catch(e){}
+    dlg.showModal(); frm.type.focus();
+  }
+  document.getElementById("reportGeneral").addEventListener("click",e=>{e.preventDefault();openReport("")});
+  document.getElementById("rCancel").addEventListener("click",()=>dlg.close());
+  frm.addEventListener("submit",async e=>{
+    e.preventDefault(); const btn=frm.querySelector("button[type=submit]"); btn.disabled=true; msg.textContent="Sending…";
+    const body=Object.fromEntries(new FormData(frm).entries());
+    try{localStorage.setItem("sambrReporter",JSON.stringify({name:body.name,email:body.email}))}catch(e){}
+    try{const r=await fetch("report.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+      const j=await r.json().catch(()=>({ok:false,error:"Server error"}));
+      if(j.ok){msg.textContent="Thanks — report received.";setTimeout(()=>dlg.close(),1200)}else{msg.textContent=j.error||"Could not send.";btn.disabled=false}
+    }catch(err){msg.textContent="Network error — please try again.";btn.disabled=false}
+  });
   render();
 });
 </script>
