@@ -178,16 +178,37 @@ def precision(s, g):
     return "local"
 
 
+def is_domain(g, ls, s):
+    """Domain-scale geometry (pan-Arctic/global model, compilation, long transect): not evidence for any one LME."""
+    if g is None or g.geom_type == "Point":
+        return False
+    b = g.bounds
+    lo0, lo1 = num(s.get("lon_min")), num(s.get("lon_max"))
+    lon_span = b[2] - b[0]
+    if lo0 is not None and lo1 is not None and lon_span > 300 and lo0 > lo1:  # dateline-crossing box
+        lon_span = (180 - lo0) + (lo1 + 180)
+    return lon_span > 90 or (b[3] - b[1]) > 30 or len(ls) > 6
+
+
 site_rows, paper_rows = [], []
 for r in recs:
     k = r["citekey"]
     d = dur.get(k, {})
     fec = r.get("fec") or d.get("fec", "")
-    plmes, best, bestp = set(), "none", "none"
+    plmes, best, bestp, multi = set(), "none", "none", False
     rank = {"exact": 3, "approx": 2, "estimated": 1}
-    for i, s in enumerate(r.get("sites") or []):
+    sites_in = r.get("sites") or []
+    has_exact_pts = any(x.get("flag") == "exact" and num(x.get("lat")) is not None and num(x.get("lat_min")) is None
+                        for x in sites_in)
+    for i, s in enumerate(sites_in):
         g = geom_of(s)
         ls = lmes_for(g)
+        scale = "site"
+        if is_domain(g, ls, s):
+            scale, ls = "domain", []
+            multi = True
+        elif g is not None and g.geom_type != "Point" and s.get("flag") == "exact" and has_exact_pts:
+            scale, ls = "summary_box", []  # box summarising a station table whose points are listed: points carry the LMEs
         plmes.update(ls)
         fl = s.get("flag", "")
         if rank.get(fl, 0) > rank.get(best, 0):
@@ -201,7 +222,7 @@ for r in recs:
             "lat_min": num(s.get("lat_min")), "lat_max": num(s.get("lat_max")),
             "lon_min": num(s.get("lon_min")), "lon_max": num(s.get("lon_max")),
             "n_stations": s.get("n_stations"), "precision": pr, "coord_flag": fl, "coord_source": s.get("source", ""),
-            "lme_polygon": "; ".join(ls), "study_type": r.get("study_type", ""),
+            "lme_polygon": "; ".join(ls), "scale": scale, "study_type": r.get("study_type", ""),
             "obs_duration": d.get("duration_class", ""), "obs_years": d.get("years", ""),
             "title": d.get("title", ""), "_geom": g})
     guess = [canon(x) for x in (r.get("lme_guess") or [])]
@@ -211,6 +232,7 @@ for r in recs:
         "n_sites": len(r.get("sites") or []), "best_precision": bestp, "best_coord_flag": best,
         "coords_in_supplement": bool(r.get("coords_in_supplement")), "supplement_note": r.get("supplement_note", ""),
         "lme_polygon": "; ".join(sorted(plmes, key=lambda x: LMES.index(x) if x in LMES else 99)),
+        "multi_lme": multi,
         "lme_agent_guess": "; ".join(guess),
         "lme_disagree": bool(plmes) and bool(set(guess) - {"outside"}) and not (set(guess) & plmes),
         "obs_duration": d.get("duration_class", ""), "obs_years": d.get("years", ""), "notes": r.get("notes", ""),
@@ -229,22 +251,26 @@ papers.to_csv(out / "plankton_papers_geo.csv", index=False)
 
 def paper_lmes(row):
     ls = [x for x in row["lme_polygon"].split("; ") if x]
-    if not ls:  # fall back to the agent's guess (flag shows in lme_source)
+    if not ls and not row["multi_lme"]:  # fall back to the agent's guess, except for domain-scale papers
         ls = [x for x in row["lme_agent_guess"].split("; ") if x in LMES]
     return ls
 
 
 papers["lmes_final"] = papers.apply(paper_lmes, axis=1)
+PA_LABEL = "Pan-Arctic / multi-LME"
 FIELD = {"field", "time_series", "mooring"}
 fld = papers[papers.study_type.isin(FIELD)]
 mats = {}
 for label, sub in [("all", papers), ("field", fld), ("field_3plus", fld[fld.obs_duration == "3plus"]),
                    ("field_2yr", fld[fld.obs_duration == "2yr"]), ("field_1yr", fld[fld.obs_duration == "1yr"])]:
-    m = pd.DataFrame(0, index=[FECS[f] for f in FECS], columns=[ODS_LABEL[l] for l in LMES])
+    m = pd.DataFrame(0, index=[FECS[f] for f in FECS], columns=[ODS_LABEL[l] for l in LMES] + [PA_LABEL])
     for _, p in sub.iterrows():
+        if p["fec"] not in FECS:
+            continue
         for l in p["lmes_final"]:
-            if p["fec"] in FECS:
-                m.loc[FECS[p["fec"]], ODS_LABEL[l]] += 1
+            m.loc[FECS[p["fec"]], ODS_LABEL[l]] += 1
+        if p["multi_lme"]:
+            m.loc[FECS[p["fec"]], PA_LABEL] += 1
     mats[label] = m
 long = pd.concat({k: v for k, v in mats.items()}, names=["papers", "fec"])
 long.to_csv(out / "fec_lme_matrix.csv")
@@ -255,6 +281,7 @@ with pd.ExcelWriter(out / "plankton_geo_by_FEC.xlsx") as xw:
         "precision (ordinal): exact = coordinates printed in the paper/supplement/dataset; local = within ~tens of km (map-read, or a named fjord/bay/station/mooring); regional = basin-scale box/transect or a sea/basin name.",
         "coord_flag (provenance): exact = printed; approx = read off a map or given as a range/box; estimated = inferred from a place name or prior knowledge.",
         "lme_polygon: interim 2013 PAME Arctic LME polygons (to be replaced by CAFF shapefiles). Papers: lme_disagree = polygon vs agent guess differ.",
+        "Domain-scale sites (boxes/transects spanning >90 deg lon or >30 deg lat, or touching >6 LMEs: pan-Arctic/global models, compilations, remote sensing) are not assigned to LMEs; those papers are counted in the 'Pan-Arctic / multi-LME' column (site scale = domain). Station-table summary boxes are ignored for LMEs when the paper's points are listed (scale = summary_box).",
         "FEC_x_LME_*: number of papers per FEC with at least one site in each LME. all = every study type (pan-Arctic models/remote sensing count in every LME they cover); field = field surveys, time series and moorings only, also split by observation span.",
         "coords_in_supplement: station list only in a supplement/data repository — main-text estimate given; follow up there for exact positions."]})
     readme.to_excel(xw, sheet_name="README", index=False)
@@ -282,7 +309,7 @@ open(web / "lme.geojson", "w").write(lme_s.to_json())
 import shutil
 for fn in ("plankton_sites.csv", "plankton_papers_geo.csv", "plankton_geo_by_FEC.xlsx", "fec_lme_matrix.csv"):
     shutil.copy2(out / fn, web / fn)
-json.dump({"fecs": FECS, "lmes": [ODS_LABEL[l] for l in LMES],
+json.dump({"fecs": FECS, "lmes": [ODS_LABEL[l] for l in LMES], "pa_label": PA_LABEL,
            "matrices": {k: v.to_dict(orient="split") for k, v in mats.items()},
            "papers": papers.drop(columns="lmes_final").fillna("").to_dict(orient="records")},
           open(web / "summary.json", "w"))

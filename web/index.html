@@ -93,6 +93,7 @@ th{color:var(--text-muted);font-weight:500}
 .heat th{font-size:11px;padding:3px 4px;white-space:nowrap}
 .heat td.c:hover,.heat td.c:focus-visible{outline:2px solid var(--lme-hover);outline-offset:-2px}
 .heat td.c{padding:3px 0;min-width:22px;text-align:center;font-variant-numeric:tabular-nums;border:2px solid var(--surface-1);border-radius:4px;cursor:default}
+.heat th.pa,.heat td.c:last-child{border-left:2px solid var(--grid)}
 .heat th.lme{text-align:center;font-size:11px;padding:4px 2px}
 .lmekey{font-size:11px;color:var(--text-muted);columns:2;margin-top:8px}
 .scroll{overflow-x:auto}
@@ -245,17 +246,20 @@ Promise.all([
   const papers=summary.papers;
   const byKey=Object.fromEntries(papers.map(p=>[p.citekey,p]));
   const LABELS=summary.lmes; // "1. Faroe Islands" ...
+  const PA=summary.pa_label||"Pan-Arctic / multi-LME";
+  const COLS=[...LABELS,PA];
+  const inCol=(p,l)=>l===PA?(p.multi_lme===true||p.multi_lme==="True"):p._lmes.includes(l);
   const lmeKey=l=>l; // polygon labels already match LABELS
   // map paper lme names (canonical) -> ODS labels by order
   const CANON=["Faroe Plateau","Iceland Shelf","Greenland Sea-East Greenland","Norwegian Sea","Barents Sea","Kara Sea","Laptev Sea","East Siberian Sea","East Bering Sea","Aleutian Islands","West Bering Sea","Northern Bering-Chukchi Sea","Central Arctic Ocean","Beaufort Sea","Canadian High Arctic-North Greenland","Baffin Bay","Hudson Bay","Labrador-Newfoundland"];
   const toLabel=Object.fromEntries(CANON.map((c,i)=>[c,LABELS[i]]));
   papers.forEach(p=>{
     let ls=(p.lme_polygon||"").split("; ").filter(Boolean);
-    if(!ls.length) ls=(p.lme_agent_guess||"").split("; ").filter(x=>toLabel[x]);
+    if(!ls.length&&!(p.multi_lme===true||p.multi_lme==="True")) ls=(p.lme_agent_guess||"").split("; ").filter(x=>toLabel[x]);
     p._lmes=ls.map(x=>toLabel[x]).filter(Boolean);
   });
 
-  d3.select("#lmekey").html(LABELS.map(esc).join("<br>"));
+  d3.select("#lmekey").html(LABELS.map(esc).join("<br>")+"<br>PA. "+esc(PA)+" (pan-Arctic/global domains: models, remote sensing, compilations)");
   const fecSeg=d3.select("#fecSeg");
   [["all","All"],...Object.entries(FEC_SHORT)].forEach(([k,v])=>fecSeg.append("button").attr("data-k",k).text(v).on("click",()=>{state.fec=k;render()}));
   const durSeg=d3.select("#durSeg");
@@ -263,7 +267,7 @@ Promise.all([
   d3.select("#q").on("input",function(){state.q=this.value.toLowerCase();renderList()});
 
   const okPaper=p=>(state.fec==="all"||p.fec===state.fec)&&(state.dur==="all"||p.obs_duration===state.dur);
-  function countLme(label){return papers.filter(p=>okPaper(p)&&p._lmes.includes(label)).length}
+  function countLme(label){return papers.filter(p=>okPaper(p)&&inCol(p,label)).length}
 
   function render(){
     fecSeg.selectAll("button").attr("aria-pressed",function(){return this.dataset.k===state.fec});
@@ -298,26 +302,26 @@ Promise.all([
 
   function renderHeat(){
     const fecs=Object.keys(FEC_SHORT);
-    const rows=fecs.map(f=>({f,c:LABELS.map(l=>papers.filter(p=>p.fec===f&&(state.dur==="all"||p.obs_duration===state.dur)&&p._lmes.includes(l)).length)}));
+    const rows=fecs.map(f=>({f,c:COLS.map(l=>papers.filter(p=>p.fec===f&&(state.dur==="all"||p.obs_duration===state.dur)&&inCol(p,l)).length)}));
     const max=d3.max(rows,r=>d3.max(r.c))||1;
     const steps=["--seq-0","--seq-1","--seq-2","--seq-3","--seq-4","--seq-5","--seq-6","--seq-7"];
     const col=v=>v===0?"transparent":`var(${steps[Math.min(7,1+Math.floor(6*v/max))]})`;
     const ink=v=>v/max>0.45?"#fff":"var(--text-primary)";
     const t=d3.select("#heat").html("");
     const hr=t.append("thead").append("tr");hr.append("th").text("FEC");
-    LABELS.forEach(l=>hr.append("th").attr("class","lme").attr("title",l).style("cursor","pointer").style("color",l===state.lme?"var(--text-primary)":"var(--text-muted)").text(l.split(". ")[0]).on("click",()=>{state.lme=state.lme===l?null:l;render()}));
+    COLS.forEach(l=>hr.append("th").attr("class","lme"+(l===PA?" pa":"")).attr("title",l).style("cursor","pointer").style("color",l===state.lme?"var(--text-primary)":"var(--text-muted)").text(l===PA?"PA":l.split(". ")[0]).on("click",()=>{state.lme=state.lme===l?null:l;render()}));
     const tb=t.append("tbody");
     rows.forEach(r=>{const tr=tb.append("tr").style("opacity",state.fec==="all"||state.fec===r.f?1:.35);tr.append("th").attr("title",FEC_SHORT[r.f]).text(FEC_TINY[r.f]);
       r.c.forEach((v,i)=>tr.append("td").attr("class","c").style("background",col(v)).style("color",ink(v)).text(v||"")
-        .style("cursor","pointer").attr("tabindex",0).attr("role","button").attr("aria-label",`${FEC_SHORT[r.f]}, ${LABELS[i]}: ${v} papers. Show on map`)
-        .on("mousemove",e=>showTip(e,`<b>${esc(FEC_SHORT[r.f])}</b> · ${esc(LABELS[i])}<br>${v} papers · click to show`)).on("mouseleave",hideTip)
-        .on("click keydown",e=>{if(e.type==="keydown"&&e.key!=="Enter"&&e.key!==" ")return;e.preventDefault();hideTip();focusCell(r.f,LABELS[i])}))});
+        .style("cursor","pointer").attr("tabindex",0).attr("role","button").attr("aria-label",`${FEC_SHORT[r.f]}, ${COLS[i]}: ${v} papers. Show on map`)
+        .on("mousemove",e=>showTip(e,`<b>${esc(FEC_SHORT[r.f])}</b> · ${esc(COLS[i])}<br>${v} papers · click to show`)).on("mouseleave",hideTip)
+        .on("click keydown",e=>{if(e.type==="keydown"&&e.key!=="Enter"&&e.key!==" ")return;e.preventDefault();hideTip();focusCell(r.f,COLS[i])}))});
   }
 
   function renderList(){
     // a text search looks across all papers, ignoring the FEC / span / LME filters
     let sel=state.q?papers:papers.filter(okPaper);
-    if(state.lme&&!state.q) sel=sel.filter(p=>p._lmes.includes(state.lme));
+    if(state.lme&&!state.q) sel=sel.filter(p=>inCol(p,state.lme));
     if(state.q){const terms=state.q.split(/\s+/).filter(Boolean);
       sel=sel.filter(p=>{const hay=(p.citekey+" "+p.title+" "+p.region_text+" "+p.authors+" "+p.journal+" "+p.year).toLowerCase();return terms.every(t=>hay.includes(t))});}
     d3.select("#listTitle").text(`Papers (${sel.length})${state.q?" — search across all papers":state.lme?" — "+state.lme:""}`);
@@ -373,6 +377,7 @@ Promise.all([
     state.fec=fec; state.lme=label; state.q=""; state.sel=null; document.getElementById("q").value="";
     render();
     const f=lme.features.find(d=>d.properties.label===label);
+    if(!f) svg.transition().duration(600).call(zoom.transform,d3.zoomIdentity);
     const m=document.getElementById("map").getBoundingClientRect();
     if(m.top<0||m.bottom>innerHeight) document.getElementById("map").scrollIntoView({behavior:"smooth",block:"center"});
     if(f) zoomTo(f);

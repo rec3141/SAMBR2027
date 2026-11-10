@@ -22,6 +22,7 @@ Portal: **https://cryomics.org/SAMBR2027/**
   - `exact`: printed in the paper or supplement.
   - `approx`: read off a map, or given as a range or box.
   - `estimated`: inferred from a place name.
+- **Domain-scale sites** (boxes or transects spanning >90° longitude or >30° latitude, or touching >6 LMEs: pan-Arctic/global models, remote sensing, compilations) are not assigned to individual LMEs; those papers are counted in a separate **Pan-Arctic / multi-LME** column.
 - **LMEs:** sites are assigned by point-in-polygon against the interim 2013 PAME Arctic LME polygons (18 LMEs, numbered as in the CAFF sheet). Points within 50 km of a polygon snap to it. These polygons will be replaced by the CAFF shapefiles.
 - **FECs (expanded):**
   - 01 Bacteria & Archaea
