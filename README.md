@@ -23,7 +23,7 @@ Portal: **https://cryomics.org/SAMBR2027/**
   - `approx`: read off a map, or given as a range or box.
   - `estimated`: inferred from a place name.
 - **Domain-scale sites** (boxes or transects spanning >90° longitude or >30° latitude, or touching >6 LMEs: pan-Arctic/global models, remote sensing, compilations) are not assigned to individual LMEs; those papers are counted in a separate **Pan-Arctic / multi-LME** column.
-- **LMEs:** sites are assigned by point-in-polygon against the interim 2013 PAME Arctic LME polygons (18 LMEs, numbered as in the CAFF sheet). Points within 50 km of a polygon snap to it. Boxes/transects count for an LME only if it holds ≥15% of the box's area within LMEs (equal-area polar projection; box edges follow parallels), plus the LME of the box's representative point. These polygons will be replaced by the CAFF shapefiles.
+- **LMEs:** sites are assigned by point-in-polygon against CAFF's Arctic LME layer (ABDS `abds:lme_arctic`, 18 LMEs, numbered and labelled as in the CAFF expert-input sheet; CAFF names such as "Hudson Bay Complex" map to the sheet labels). Until 2026-11-12 the interim layer was PAME 2013, whose East/West Bering Sea labels are swapped. Points within 50 km of a polygon snap to it. Boxes/transects count for an LME only if it holds ≥15% of the box's area within LMEs (equal-area polar projection; box edges follow parallels), plus the LME of the box's representative point. `data/geo/lme_ama_crosswalk_pct.csv` gives the % of each LME's area in each of the 8 CBMP Arctic Marine Areas used in SAMBR 2017.
 - **FECs (expanded):**
   - 01 Bacteria & Archaea
   - 02 Viruses

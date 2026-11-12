@@ -22,8 +22,9 @@ from shapely.geometry import Point, box, LineString
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PROJ = pathlib.Path(os.environ.get("SAMBR_PROJECT", pathlib.Path.home() / "Documents/Research/Projects/2026-SAMBR"))
 ap = argparse.ArgumentParser()
-ap.add_argument("--lme", default=str(PROJ / "2_data/raw/lme/LME_2013_polygon.shp"))
-ap.add_argument("--lme-field", default="LME")
+ap.add_argument("--lme", default=str(PROJ / "2_data/raw/caff_lme/lme_arctic.shp"),
+                help="LME polygons; default = CAFF ABDS lme_arctic (WFS export). The PAME 2013 file was the interim layer.")
+ap.add_argument("--lme-field", default=None, help="name field (auto: lme_name or LME)")
 ap.add_argument("--no-bering-swap", action="store_true",
                 help="the 2013 PAME file has the East/West Bering Sea labels swapped; we swap them back unless this is set")
 args = ap.parse_args()
@@ -42,7 +43,12 @@ ALIAS = {"fareo plateau": "Faroe Plateau", "faroe plateau": "Faroe Plateau", "ic
          "greenland sea": "Greenland Sea-East Greenland", "norwegain sea": "Norwegian Sea", "norwegian sea": "Norwegian Sea",
          "alutian islands": "Aleutian Islands", "aleutian islands": "Aleutian Islands", "chukchi sea": "Northern Bering-Chukchi Sea",
          "northern canadian archipelago": "Canadian High Arctic-North Greenland", "central arctic": "Central Arctic Ocean",
-         "labrador sea": "Labrador-Newfoundland"}
+         "labrador sea": "Labrador-Newfoundland",
+         # CAFF ABDS lme_arctic names
+         "labrador - newfoundland": "Labrador-Newfoundland", "iceland shelf and sea": "Iceland Shelf",
+         "canadian eastern arctic - west greenland": "Baffin Bay", "hudson bay complex": "Hudson Bay",
+         "canadian high arctic - north greenland": "Canadian High Arctic-North Greenland",
+         "northern bering - chukchi seas": "Northern Bering-Chukchi Sea"}
 FECS = {"01": "Bacteria and Archaea", "02": "Viruses", "03": "Microbial eukaryotes",
         "04": "Phytoplankton and larger protists", "05": "Zooplankton", "06": "Cross-cutting (drivers, biogeochemistry, syntheses)"}
 
@@ -53,7 +59,11 @@ def canon(name):
 
 
 lme_src = gpd.read_file(args.lme)
-lme_src["lme"] = lme_src[args.lme_field].map(canon)
+_fld = args.lme_field or next(f for f in ("lme_name", "LME", "LME_NAME") if f in lme_src.columns)
+lme_src["lme"] = lme_src[_fld].map(canon)
+assert set(lme_src["lme"]) == set(LMES), sorted(set(lme_src["lme"]) ^ set(LMES))
+from shapely.validation import make_valid
+lme_src["geometry"] = lme_src.geometry.map(lambda g: g if g.is_valid else make_valid(g))
 if not args.no_bering_swap and "2013" in pathlib.Path(args.lme).name:
     lme_src["lme"] = lme_src["lme"].replace({"East Bering Sea": "West Bering Sea", "West Bering Sea": "East Bering Sea"})
 lme_p = lme_src.to_crs(3995)  # Arctic polar stereographic: no antimeridian problems for point-in-polygon
