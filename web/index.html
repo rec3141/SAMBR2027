@@ -64,7 +64,7 @@ dialog#reportDlg::backdrop{background:rgba(0,0,0,.45)}
 #reportForm select,#reportForm textarea,#reportForm input{display:block;width:100%;margin-top:4px;font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface-0);color:var(--text-primary)}
 #reportForm .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media (max-width:520px){#reportForm .row2{grid-template-columns:1fr}}
-#reportForm .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+#reportForm .rnote{font-size:12px;color:var(--text-secondary);margin:10px 0 0}
 .rpaper{font-size:12px;color:var(--text-muted);margin:0}
 .dlgbar{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:14px}
 .dlgbar #rMsg{margin-right:auto;font-size:12px;color:var(--text-secondary)}
@@ -169,7 +169,6 @@ a{color:var(--series)}
     <h2 id="rTitle">Report incorrect data</h2>
     <p id="rPaper" class="rpaper"></p>
     <input type="hidden" name="citekey"><input type="hidden" name="context">
-    <label class="hp" aria-hidden="true">Website <input name="website" tabindex="-1" autocomplete="off"></label>
     <label>What is wrong?
       <select name="type" required>
         <option value="location">Sampling location / coordinates</option>
@@ -180,10 +179,9 @@ a{color:var(--series)}
         <option value="missing_paper">A paper is missing</option>
         <option value="other">Other</option>
       </select></label>
-    <label>Details <textarea name="details" rows="5" required maxlength="4000" placeholder="e.g. Stations are in Table 2: 78.9N 11.9E …"></textarea></label>
-    <div class="row2"><label>Your name (optional) <input name="name" maxlength="120" autocomplete="name"></label>
-    <label>Email (optional) <input name="email" type="email" maxlength="160" autocomplete="email"></label></div>
-    <div class="dlgbar"><span id="rMsg" role="status"></span><button type="button" id="rCancel" class="btn">Cancel</button><button type="submit" class="btn primary">Send report</button></div>
+    <label>Details <textarea name="details" rows="5" required maxlength="2500" placeholder="e.g. Stations are in Table 2: 78.9N 11.9E …"></textarea></label>
+    <p class="rnote">This opens a pre-filled issue on <a href="https://github.com/rec3141/SAMBR2027/issues">GitHub</a> (free account needed); review it there and press <b>Create</b>.</p>
+    <div class="dlgbar"><span id="rMsg" role="status"></span><button type="button" id="rCancel" class="btn">Cancel</button><button type="submit" class="btn primary">Open GitHub issue</button></div>
   </form>
 </dialog>
 
@@ -417,26 +415,31 @@ Promise.all([
   }
   d3.select("#papers").on("click",e=>{const f=e.target.closest("button.flag");if(f){e.stopPropagation();openReport(f.dataset.k);return}
     const b=e.target.closest("button.globe");if(b){e.stopPropagation();showOnMap(b.dataset.k)}});
-  // report incorrect data -> report.php (stored server-side, outside the web root)
+  // report incorrect data -> pre-filled GitHub issue (no server-side code)
   const dlg=document.getElementById("reportDlg"), frm=document.getElementById("reportForm"), msg=document.getElementById("rMsg");
   function openReport(k){
     const p=byKey[k]; frm.reset(); msg.textContent=""; frm.querySelector("button[type=submit]").disabled=false;
     frm.citekey.value=k||"";
     document.getElementById("rPaper").textContent=p?`${p.citekey} · ${p.title}`:"General report (e.g. a missing paper)";
     frm.context.value=p?`FEC ${p.fec}; LMEs ${p._lmes.map(l=>l.split(". ")[0]).join(",")}; precision ${p.best_precision}; span ${p.obs_duration}; region: ${p.region_text}`.slice(0,600):"";
-    try{const saved=JSON.parse(localStorage.getItem("sambrReporter")||"{}");frm.name.value=saved.name||"";frm.email.value=saved.email||""}catch(e){}
     dlg.showModal(); frm.type.focus();
   }
   document.getElementById("reportGeneral").addEventListener("click",e=>{e.preventDefault();openReport("")});
   document.getElementById("rCancel").addEventListener("click",()=>dlg.close());
-  frm.addEventListener("submit",async e=>{
-    e.preventDefault(); const btn=frm.querySelector("button[type=submit]"); btn.disabled=true; msg.textContent="Sending…";
-    const body=Object.fromEntries(new FormData(frm).entries());
-    try{localStorage.setItem("sambrReporter",JSON.stringify({name:body.name,email:body.email}))}catch(e){}
-    try{const r=await fetch("report.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-      const j=await r.json().catch(()=>({ok:false,error:"Server error"}));
-      if(j.ok){msg.textContent="Thanks — report received.";setTimeout(()=>dlg.close(),1200)}else{msg.textContent=j.error||"Could not send.";btn.disabled=false}
-    }catch(err){msg.textContent="Network error — please try again.";btn.disabled=false}
+  frm.addEventListener("submit",e=>{
+    e.preventDefault();
+    const f=Object.fromEntries(new FormData(frm).entries());
+    const typeLabel=frm.type.options[frm.type.selectedIndex].text;
+    const p=byKey[f.citekey];
+    const title=`Data report: ${f.citekey||"general"} (${typeLabel})`;
+    const body=["**Problem type:** "+typeLabel,
+      "**Paper:** "+(p?`${p.citekey} · ${p.title}`:"(general report)"),
+      f.context?"**Portal context:** "+f.context:"",
+      "","**Details:**","",f.details.trim(),"","---","*Sent from the [SAMBR 2027 Plankton portal](https://cryomics.org/SAMBR2027/)*"]
+      .filter((x,i)=>x!==""||i>2).join("\n");
+    const url="https://github.com/rec3141/SAMBR2027/issues/new?title="+encodeURIComponent(title)+"&body="+encodeURIComponent(body);
+    window.open(url,"_blank","noopener");
+    msg.textContent="Opened GitHub in a new tab."; setTimeout(()=>dlg.close(),1500);
   });
   render();
 });
